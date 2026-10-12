@@ -1,25 +1,54 @@
-export type Team = 'designer' | 'editor' | 'admin' | 'unassigned';
-export type Role = 'admin' | 'designer' | 'editor';
+/** The three built-in roles. Admin-created roles ("custom roles") are plain strings and behave like Designer/Editor. */
+export type BaseRole = 'admin' | 'designer' | 'editor';
+export type Role = string;
+export type Team = string;
 export type Status = 'not_started' | 'in_progress' | 'completed' | 'blocked';
 
-export const TEAMS: Record<Team, string> = {
+export const BASE_TEAMS: Record<string, string> = {
   designer: 'Graphic Designer',
   editor: 'Video Editor',
   admin: 'Admin Only',
   unassigned: 'Unassigned',
 };
-export const TEAM_KEYS = Object.keys(TEAMS) as Team[];
-export const TEAM_SHORT: Record<Team, string> = {
-  designer: 'Design',
-  editor: 'Video',
-  admin: 'Admin',
-  unassigned: 'Unassigned',
-};
-export const ROLES: Record<Role, string> = {
-  admin: 'Admin',
-  designer: 'Graphic Designer',
-  editor: 'Video Editor',
-};
+export const RESERVED_ROLE_KEYS = ['admin', 'designer', 'editor', 'unassigned', 'team', 'all'];
+
+export interface CustomRole {
+  key: string;
+  name: string;
+  hasPin: boolean;
+}
+
+/* Live registries. registerRoles() fills in the admin-created roles; the objects are mutated in place so every
+   module that imported them (browser and server) sees the current names. */
+export const TEAMS: Record<string, string> = { ...BASE_TEAMS };
+export const TEAM_SHORT: Record<string, string> = { designer: 'Design', editor: 'Video', admin: 'Admin', unassigned: 'Unassigned' };
+export const ROLES: Record<string, string> = { admin: 'Admin', designer: 'Graphic Designer', editor: 'Video Editor' };
+
+let customKeys: string[] = [];
+export function registerRoles(list: { key: string; name: string }[]) {
+  for (const k of Object.keys(TEAMS)) delete TEAMS[k];
+  for (const k of Object.keys(TEAM_SHORT)) delete TEAM_SHORT[k];
+  for (const k of customKeys) delete ROLES[k];
+  customKeys = list.map((r) => r.key);
+  TEAMS.designer = BASE_TEAMS.designer;
+  TEAMS.editor = BASE_TEAMS.editor;
+  TEAM_SHORT.designer = 'Design';
+  TEAM_SHORT.editor = 'Video';
+  for (const r of list) {
+    TEAMS[r.key] = r.name;
+    TEAM_SHORT[r.key] = r.name;
+    ROLES[r.key] = r.name;
+  }
+  TEAMS.admin = BASE_TEAMS.admin;
+  TEAMS.unassigned = BASE_TEAMS.unassigned;
+  TEAM_SHORT.admin = 'Admin';
+  TEAM_SHORT.unassigned = 'Unassigned';
+}
+export const teamKeys = (): string[] => Object.keys(TEAMS);
+/** Teams that do production work: designer, editor and every admin-created role. */
+export const workTeams = (): string[] => teamKeys().filter((k) => k !== 'admin' && k !== 'unassigned');
+export const isWorkTeam = (k: string) => k !== 'admin' && k !== 'unassigned';
+
 export const STATUS: Record<Status, string> = {
   not_started: 'Not Started',
   in_progress: 'In Progress',
@@ -143,7 +172,8 @@ export interface ImportRec {
 export interface Settings {
   targetBuffer: number;
   allowTeamEdit: boolean;
-  pins: Record<Role, boolean>;
+  pins: Record<BaseRole, boolean>;
+  roles: CustomRole[];
 }
 
 export interface SessionInfo {
@@ -151,5 +181,6 @@ export interface SessionInfo {
   role?: Role;
   name?: string;
   setupNeeded: boolean;
-  pins: Record<Role, boolean>;
+  pins: Record<BaseRole, boolean>;
+  roles: CustomRole[];
 }

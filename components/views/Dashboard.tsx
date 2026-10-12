@@ -3,7 +3,7 @@ import { useEffect } from 'react';
 import { addDays, fmtDate } from '@/lib/dates';
 import { health, isOverdue, periodRange, pm } from '@/lib/metrics';
 import { genericHeads, pctOf, plural } from '@/lib/text';
-import type { Status } from '@/lib/constants';
+import { TEAMS, type Status } from '@/lib/constants';
 import { useApp } from '../store';
 import { CovCard, RecentActivity, TeamCompare } from '../parts';
 import { CovScale, EmptyImport, Kpi, PageHeader, Pill, ProgRow, Ring } from '../ui';
@@ -56,12 +56,14 @@ export function Dashboard() {
   if (odList.length) {
     const d = odList.filter((t) => t.team === 'designer').length;
     const e = odList.filter((t) => t.team === 'editor').length;
-    alerts.push(['bad', '!', `${plural(odList.length, 'overdue task')} (Designer ${d}, Editor ${e})`, 'overdue']);
+    const more = H.c.extra.map((x) => `${TEAMS[x.key] || x.key} ${odList.filter((t) => t.team === x.key).length}`);
+    alerts.push(['bad', '!', `${plural(odList.length, 'overdue task')} (${['Designer ' + d, 'Editor ' + e, ...more].join(', ')})`, 'overdue']);
   }
   (
     [
       ['Designer', H.c.d],
       ['Editor', H.c.e],
+      ...H.c.extra.map((x) => [TEAMS[x.key] || x.key, x.c] as const),
     ] as const
   ).forEach(([n, cv]) => {
     if (cv.none) return;
@@ -148,6 +150,9 @@ export function Dashboard() {
         <div className="grid g3">
           <CovCard label="Designer coverage" c={H.c.d} tgt={H.tgt} />
           <CovCard label="Video Editor coverage" c={H.c.e} tgt={H.tgt} />
+          {H.c.extra.map((x) => (
+            <CovCard key={x.key} label={`${TEAMS[x.key] || x.key} coverage`} c={x.c} tgt={H.tgt} />
+          ))}
           <CovCard label="Overall production coverage" c={H.c.o} tgt={H.tgt} />
         </div>
         <div className="grid g2">

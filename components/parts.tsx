@@ -1,5 +1,5 @@
 'use client';
-import { TEAMS } from '@/lib/constants';
+import { TEAMS, workTeams } from '@/lib/constants';
 import { addDays, fmtDate, fmtDT, localDay } from '@/lib/dates';
 import { coverage, isOverdue, sched, type Coverage } from '@/lib/metrics';
 import { displayTitle, type CTask } from '@/lib/tasks';
@@ -26,7 +26,7 @@ export function CovCard({ label, c, tgt }: { label: string; c: Coverage; tgt: nu
 
 export function TeamCompare() {
   const { act, today } = useApp();
-  const rows = (['designer', 'editor'] as const).map((team) => {
+  const rows = workTeams().map((team) => {
     const l = act.filter((t) => t.team === team);
     const done = l.filter((t) => t.status === 'completed').length;
     const od = l.filter((t) => isOverdue(t, today)).length;

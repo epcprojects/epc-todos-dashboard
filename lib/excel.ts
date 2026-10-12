@@ -147,7 +147,7 @@ export interface WizSheet {
   ws: XLSX.WorkSheet;
   est: number;
   selected: boolean;
-  team: 'designer' | 'editor' | 'admin' | 'unassigned';
+  team: string;
   suggested: 'designer' | 'editor' | 'unassigned';
   grid?: Grid;
   noHeader?: boolean;

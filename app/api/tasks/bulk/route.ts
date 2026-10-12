@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { requireSession } from '@/lib/server/auth';
 import { q } from '@/lib/server/db';
 import { body, clientTz, handle, json } from '@/lib/server/http';
+import { assertTeams } from '@/lib/server/roles';
 import { assignTeam, changeStatuses, deleteTasks, fetchLite, setArchived } from '@/lib/server/tasks';
 
 export const dynamic = 'force-dynamic';
@@ -13,7 +14,7 @@ const schema = z.discriminatedUnion('action', [
   z.object({
     action: z.literal('assign'),
     ids,
-    team: z.enum(['designer', 'editor', 'admin', 'unassigned']),
+    team: z.string().min(1).max(40),
     // "Reassign an entire sheet" also moves the sheet's own assignment.
     sheet: z.object({ importId: z.string().max(100), sheetIdx: z.number().int() }).optional(),
   }),
@@ -33,6 +34,7 @@ export const POST = handle(async (req: Request) => {
   if (b.action === 'delete') {
     return json({ ok: true, count: await deleteTasks(b.ids) });
   }
+  if (b.action === 'assign') await assertTeams([b.team]);
   const rows = await fetchLite(b.ids);
   switch (b.action) {
     case 'assign':

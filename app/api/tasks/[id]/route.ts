@@ -7,6 +7,7 @@ import { dupKey, deriveFields } from '@/lib/text';
 import { requireSession } from '@/lib/server/auth';
 import { q, tx } from '@/lib/server/db';
 import { ApiError, body, clientTz, handle, json } from '@/lib/server/http';
+import { assertTeams } from '@/lib/server/roles';
 import { deleteTasks, fetchTasks, historyQuery } from '@/lib/server/tasks';
 
 export const dynamic = 'force-dynamic';
@@ -17,7 +18,7 @@ const schema = z
     blockedReason: z.string().max(200).optional(),
     notes: z.string().max(20000).optional(),
     content: z.array(z.string().max(40000)).max(200).optional(),
-    team: z.enum(['designer', 'editor', 'admin', 'unassigned']).optional(),
+    team: z.string().min(1).max(40).optional(),
     adminNote: z.string().max(20000).optional(),
     archived: z.boolean().optional(),
   })
@@ -41,6 +42,7 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
     throw new ApiError(role === 'admin' ? 404 : 403, role === 'admin' ? 'Task not found.' : 'You can only change tasks assigned to your team.');
   }
 
+  if (p.team !== undefined) await assertTeams([p.team]);
   const adminOnly = p.team !== undefined || p.adminNote !== undefined || p.archived !== undefined;
   if (adminOnly && role !== 'admin') throw new ApiError(403, 'Only the admin can assign, archive or leave notes for the team.');
   if (p.content !== undefined && !canEditContent(role, task, settings.allowTeamEdit)) {

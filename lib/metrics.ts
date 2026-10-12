@@ -40,9 +40,12 @@ export function coverage(list: TaskLike[], today: string): Coverage {
 export function covAll(list: (TaskLike & { team: Team })[], today: string) {
   const d = coverage(list.filter((t) => t.team === 'designer'), today);
   const e = coverage(list.filter((t) => t.team === 'editor'), today);
-  const live = [d, e].filter((c) => !c.none);
+  // admin-created roles count too: the overall figure is the slowest team that has upcoming content
+  const extraKeys = [...new Set(list.map((t) => t.team))].filter((k) => k !== 'designer' && k !== 'editor' && k !== 'admin' && k !== 'unassigned');
+  const extra = extraKeys.map((k) => ({ key: k, c: coverage(list.filter((t) => t.team === k), today) }));
+  const live = [d, e, ...extra.map((x) => x.c)].filter((c) => !c.none);
   const o: Coverage = live.length ? live.reduce((a, b) => (a.days <= b.days ? a : b)) : { days: 0, through: null, none: true, gap: null };
-  return { d, e, o };
+  return { d, e, o, extra };
 }
 
 export type HealthKind = 'behind' | 'none' | 'ahead' | 'ontrack' | 'risk';

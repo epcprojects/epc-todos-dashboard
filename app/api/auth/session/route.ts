@@ -1,4 +1,4 @@
-import { getSession, readSettings } from '@/lib/server/auth';
+import { publicRoles, getSession, readSettings } from '@/lib/server/auth';
 import { handle, json } from '@/lib/server/http';
 
 export const dynamic = 'force-dynamic';
@@ -13,5 +13,6 @@ export const GET = handle(async (req: Request) => {
     name: s?.session.name,
     setupNeeded: !settings.hasPin.admin,
     pins: settings.hasPin,
+    roles: publicRoles(settings),
   });
 });

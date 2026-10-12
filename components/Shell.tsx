@@ -15,7 +15,7 @@ import { ImportPage } from './views/ImportPage';
 type NavItem = [string, string, { n: number; bad?: boolean } | null];
 
 function useNavItems(): NavItem[] {
-  const { role, act, today, imports } = useApp();
+  const { role, act, today, imports, customRoles } = useApp();
   if (!role) return [];
   const teamOf = (team: string) => act.filter((t) => t.team === team);
   if (role === 'admin') {
@@ -26,6 +26,7 @@ function useNavItems(): NavItem[] {
       ['distribution', 'Task Distribution', { n: act.length }],
       ['designer', 'Designer', { n: teamOf('designer').filter((t) => t.status !== 'completed').length }],
       ['editor', 'Video Editor', { n: teamOf('editor').filter((t) => t.status !== 'completed').length }],
+      ...customRoles.map((c): NavItem => ['team:' + c.key, c.name, { n: teamOf(c.key).filter((t) => t.status !== 'completed').length }]),
       ['calendar', 'Calendar / Schedule', null],
       ['reports', 'Reports', null],
       ['imports', 'Imports', { n: imports.length }],
@@ -86,7 +87,7 @@ export function Shell() {
         main = <SettingsView />;
         break;
       default:
-        main = <Dashboard />;
+        main = cur.startsWith('team:') ? <TeamView team={cur.slice(5)} admin /> : <Dashboard />;
     }
   } else if (cur === 'calendar') main = <CalendarView />;
   else main = <TeamView team={role} admin={false} />;

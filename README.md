@@ -48,6 +48,10 @@ The app never creates or migrates tables. You create them once yourself:
 2. Open **SQL Editor**, paste the whole of [`neon_schema.sql`](neon_schema.sql) and press **Run**. Running it again is safe – it only creates what is missing.
 3. Open **Dashboard → Connect**, switch **Pooled connection** on and copy the connection string. That is your `DATABASE_URL`.
 
+### Optional: admin-created roles (migration 001)
+
+To let the admin create extra roles (for example "Front-end Developer") with their own PINs, run [`migrations/001_custom_roles.sql`](migrations/001_custom_roles.sql) once in the Neon SQL Editor of the database the app uses. It adds a `custom_roles` table and removes the three CHECK constraints that only allowed Designer/Editor. Until it is run, everything else works and *Settings → Team roles* shows an explanatory error when you try to create a role.
+
 ## 4. Deploy to Vercel
 
 1. Push this folder to a Git repository (GitHub, GitLab or Bitbucket).

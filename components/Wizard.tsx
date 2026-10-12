@@ -1,6 +1,6 @@
 'use client';
 import { useEffect } from 'react';
-import { CHUNK_SIZE, FIELDS, TEAMS, TEAM_KEYS, type FieldKey, type SheetMeta, type Team } from '@/lib/constants';
+import { CHUNK_SIZE, FIELDS, TEAMS, teamKeys, type FieldKey, type SheetMeta, type Team } from '@/lib/constants';
 import { fmtDate } from '@/lib/dates';
 import { analyze, computeDates, guessOrder, headerChoices, readGrid, type DataRow, type WizSheet } from '@/lib/excel';
 import { deriveFields, plural } from '@/lib/text';
@@ -529,7 +529,7 @@ export function Wizard({ w, bump, close }: { w: Wiz; bump: () => void; close: ()
                       bump();
                     }}
                   >
-                    {TEAM_KEYS.map((t) => (
+                    {teamKeys().map((t) => (
                       <option key={t} value={t}>
                         {TEAMS[t]}
                         {s.suggested === t && t !== 'unassigned' ? ' (suggested)' : ''}

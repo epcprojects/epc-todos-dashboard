@@ -62,7 +62,7 @@ export function LoginView() {
     );
   }
 
-  const has = info.pins[role];
+  const has = role === 'admin' || role === 'designer' || role === 'editor' ? info.pins[role] : !!info.roles.find((c) => c.key === role)?.hasPin;
   const submit = async () => {
     setBusy(true);
     setErr('');
@@ -88,7 +88,7 @@ export function LoginView() {
         <div className="field">
           <span>I am the</span>
           <div className="row" role="radiogroup" aria-label="Role">
-            {(['designer', 'editor', 'admin'] as Role[]).map((r) => (
+            {(['designer', 'editor', ...info.roles.map((c) => c.key), 'admin'] as Role[]).map((r) => (
               <button
                 key={r}
                 type="button"

@@ -12,11 +12,11 @@ import { TaskTable } from '../TaskTable';
 export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
   const { act, today, settings, teamTab, setTeamTab, qExpand, setQExpand, teamQuick, setViewAs, nav } = useApp();
   const list = act.filter((t) => t.team === team);
-  const title = team === 'designer' ? 'Graphic Design Tasks' : 'Video Editing Tasks';
+  const title = team === 'designer' ? 'Graphic Design Tasks' : team === 'editor' ? 'Video Editing Tasks' : `${TEAMS[team] || 'Team'} Tasks`;
   const key = 'team-' + team;
   const empty = (
     <div className="empty">
-      <h2>{team === 'designer' ? 'No design tasks assigned.' : 'No video tasks assigned.'}</h2>
+      <h2>{team === 'designer' ? 'No design tasks assigned.' : team === 'editor' ? 'No video tasks assigned.' : 'No tasks assigned.'}</h2>
       {admin ? <p className="muted">Assign a sheet or tasks to this team in Task Distribution.</p> : null}
     </div>
   );

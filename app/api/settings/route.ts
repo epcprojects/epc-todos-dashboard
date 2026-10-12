@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { readSettings, requireSession } from '@/lib/server/auth';
+import { publicRoles, readSettings, requireSession } from '@/lib/server/auth';
 import { q } from '@/lib/server/db';
 import { body, handle, json } from '@/lib/server/http';
 
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 /** Only these fields ever reach the browser: no PIN hashes. */
 export const GET = handle(async (req: Request) => {
   const { settings } = await requireSession(req);
-  return json({ targetBuffer: settings.targetBuffer, allowTeamEdit: settings.allowTeamEdit, pins: settings.hasPin });
+  return json({ targetBuffer: settings.targetBuffer, allowTeamEdit: settings.allowTeamEdit, pins: settings.hasPin, roles: publicRoles(settings) });
 });
 
 const patch = z
@@ -26,5 +26,5 @@ export const PATCH = handle(async (req: Request) => {
     [p.targetBuffer ?? null, p.allowTeamEdit ?? null],
   );
   const s = await readSettings();
-  return json({ targetBuffer: s.targetBuffer, allowTeamEdit: s.allowTeamEdit, pins: s.hasPin });
+  return json({ targetBuffer: s.targetBuffer, allowTeamEdit: s.allowTeamEdit, pins: s.hasPin, roles: publicRoles(s) });
 });

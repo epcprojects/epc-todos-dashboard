@@ -1,6 +1,6 @@
 'use client';
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { type HistoryEntry, type ImportRec, type Role, type SessionInfo, type Settings, type Status, type Task, type Team } from '@/lib/constants';
+import { registerRoles, type BaseRole, type CustomRole, type HistoryEntry, type ImportRec, type Role, type SessionInfo, type Settings, type Status, type Task, type Team } from '@/lib/constants';
 import { fmtDT, todayISO } from '@/lib/dates';
 import { canTouch as canTouchPerm } from '@/lib/perms';
 import { statusPatch } from '@/lib/status';
@@ -104,6 +104,10 @@ interface Ctx {
   bulk: (ids: string[], payload: BulkPayload, label: string, local?: (t: CTask) => Partial<Task> | null) => Promise<void>;
   saveSettings: (patch: { targetBuffer?: number; allowTeamEdit?: boolean }) => Promise<void>;
   savePin: (role: Role, pin: string) => Promise<boolean>;
+  customRoles: CustomRole[];
+  createRole: (name: string, pin: string) => Promise<boolean>;
+  renameRole: (key: string, name: string) => Promise<boolean>;
+  deleteRole: (key: string) => Promise<boolean>;
   gotoTasks: (q: string) => void;
   gotoReport: (kind: PeriodKind) => void;
   teamQuick: (team: string, q: string) => void;
@@ -116,8 +120,8 @@ export const useApp = () => {
   return c;
 };
 
-const defaultInfo: SessionInfo = { authenticated: false, setupNeeded: false, pins: { admin: false, designer: false, editor: false } };
-const defaultSettings: Settings = { targetBuffer: 7, allowTeamEdit: false, pins: { admin: false, designer: false, editor: false } };
+const defaultInfo: SessionInfo = { authenticated: false, setupNeeded: false, pins: { admin: false, designer: false, editor: false }, roles: [] };
+const defaultSettings: Settings = { targetBuffer: 7, allowTeamEdit: false, pins: { admin: false, designer: false, editor: false }, roles: [] };
 const POLL_MS = 15000;
 const OVERLAP_MS = 5000;
 const STATUS_QUICK = ['completed', 'in_progress', 'not_started', 'blocked'];
@@ -128,7 +132,22 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [info, setInfo] = useState<SessionInfo>(defaultInfo);
   const [session, setSession] = useState<{ role: Role; name: string } | null>(null);
   const [viewAs, setViewAs] = useState<Role | null>(null);
-  const [settings, setSettings] = useState<Settings>(defaultSettings);
+  const [settings, setSettingsRaw] = useState<Settings>(defaultSettings);
+  const [rolesVer, setRolesVer] = useState(0);
+  const applyRoles = useCallback((roles: CustomRole[]) => {
+    registerRoles(roles);
+    setRolesVer((v) => v + 1);
+  }, []);
+  const setSettings = useCallback(
+    (u: Settings | ((s: Settings) => Settings)) => {
+      setSettingsRaw((prev) => {
+        const next = typeof u === 'function' ? u(prev) : u;
+        if (next.roles !== prev.roles) queueMicrotask(() => applyRoles(next.roles || []));
+        return next;
+      });
+    },
+    [applyRoles],
+  );
   const [loaded, setLoaded] = useState(false);
   const [imports, setImports] = useState<ImportRec[]>([]);
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
@@ -280,6 +299,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   const refreshInfo = useCallback(async () => {
     const i = await api<SessionInfo>('/api/auth/session', { quiet401: true });
+    registerRoles(i.roles || []);
+    setRolesVer((v) => v + 1);
     setInfo(i);
     return i;
   }, []);
@@ -604,8 +625,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const savePin = useCallback(
     async (r: Role, pin: string) => {
       try {
-        const res = await api<{ pins: Record<Role, boolean> }>('/api/settings/pin', { body: { role: r, pin } });
-        setSettings((s) => ({ ...s, pins: res.pins }));
+        const res = await api<{ pins: Record<BaseRole, boolean>; roles: CustomRole[] }>('/api/settings/pin', { body: { role: r, pin } });
+        setSettings((s) => ({ ...s, pins: res.pins, roles: res.roles }));
         toast('Settings saved');
         return true;
       } catch (e) {
@@ -615,6 +636,26 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [toast],
   );
+
+  const customRoles = settings.roles || [];
+  const roleCall = useCallback(
+    async (fn: () => Promise<{ roles: CustomRole[] }>, okMsg: string) => {
+      try {
+        const r = await fn();
+        setSettings((s) => ({ ...s, roles: r.roles }));
+        toast(okMsg);
+        return true;
+      } catch (e) {
+        toast(e instanceof Error ? e.message : 'Something went wrong.', 'bad');
+        return false;
+      }
+    },
+    [toast, setSettings],
+  );
+  const createRole = useCallback((name: string, pin: string) => roleCall(() => api('/api/roles', { body: { name, pin } }), 'Role created'), [roleCall]);
+  const renameRole = useCallback((key: string, name: string) => roleCall(() => api(`/api/roles/${encodeURIComponent(key)}`, { method: 'PATCH', body: { name } }), 'Role renamed'), [roleCall]);
+  const deleteRole = useCallback((key: string) => roleCall(() => api(`/api/roles/${encodeURIComponent(key)}`, { method: 'DELETE' }), 'Role deleted'), [roleCall]);
+  void rolesVer;
 
   const value: Ctx = {
     boot,
@@ -673,6 +714,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
     bulk,
     saveSettings,
     savePin,
+    customRoles,
+    createRole,
+    renameRole,
+    deleteRole,
     gotoTasks,
     gotoReport,
     teamQuick,

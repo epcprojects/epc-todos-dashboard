@@ -1,5 +1,5 @@
 'use client';
-import { TEAM_SHORT, type Team } from '@/lib/constants';
+import { TEAM_SHORT, teamKeys } from '@/lib/constants';
 import { addDays, diffDays, fmtDate, fromUTC, toUTC, weekStart } from '@/lib/dates';
 import { isOverdue } from '@/lib/metrics';
 import { displayTitle, type CTask } from '@/lib/tasks';
@@ -29,12 +29,7 @@ export function CalendarView() {
     let lines: React.ReactNode;
     if (r === 'admin') {
       lines = (
-        [
-          ['designer', 'Design'],
-          ['editor', 'Video'],
-          ['admin', 'Admin'],
-          ['unassigned', 'Unassigned'],
-        ] as [Team, string][]
+        teamKeys().map((k) => [k, TEAM_SHORT[k]] as [string, string])
       ).map(([tm, lb]) => {
         const x = l.filter((t) => t.team === tm);
         if (!x.length) return null;

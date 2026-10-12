@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
-import { TEAMS, TEAM_KEYS, type HistoryEntry, type Task, type Team } from '@/lib/constants';
+import { TEAMS, teamKeys, type HistoryEntry, type Task, type Team } from '@/lib/constants';
 import { fmtDate, fmtDT, parseDateText } from '@/lib/dates';
 import { sched } from '@/lib/metrics';
 import { canEditContent } from '@/lib/perms';
@@ -297,7 +297,7 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
               <label className="field">
                 <span>Assigned team</span>
                 <select className="inp" id="d-team" value={team} onChange={(e) => setTeam(e.target.value as Team)}>
-                  {TEAM_KEYS.map((x) => (
+                  {teamKeys().map((x) => (
                     <option key={x} value={x}>
                       {TEAMS[x]}
                     </option>

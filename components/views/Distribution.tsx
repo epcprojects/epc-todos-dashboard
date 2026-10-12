@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { TEAMS, TEAM_KEYS, type Team } from '@/lib/constants';
+import { TEAMS, teamKeys, type Team } from '@/lib/constants';
 import { useApp } from '../store';
 import { PageHeader } from '../ui';
 import { TaskTable } from '../TaskTable';
@@ -66,7 +66,7 @@ export function Distribution() {
             <label className="field" style={{ flex: 1, minWidth: 200 }}>
               <span>Assign to</span>
               <select className="inp" id="rs-team" value={team} onChange={(e) => setTeam(e.target.value as Team)}>
-                {TEAM_KEYS.map((x) => (
+                {teamKeys().map((x) => (
                   <option key={x} value={x}>
                     {TEAMS[x]}
                   </option>

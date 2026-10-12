@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
-import { STATUS, STATUS_KEYS, TEAMS, TEAM_KEYS, TEAM_SHORT, type Status, type Task, type Team } from '@/lib/constants';
+import { STATUS, STATUS_KEYS, TEAMS, teamKeys, TEAM_SHORT, type Status, type Task, type Team } from '@/lib/constants';
 import { fmtDT } from '@/lib/dates';
 import { sched } from '@/lib/metrics';
 import { statusPatch } from '@/lib/status';
@@ -229,7 +229,7 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
               <span>Assigned team</span>
               <select className="inp" id={`fteam-${tkey}`} value={f.team} onChange={(e) => setF('team', e.target.value)}>
                 <option value="">All teams</option>
-                {TEAM_KEYS.map((x) => (
+                {teamKeys().map((x) => (
                   <option key={x} value={x}>
                     {TEAMS[x]}
                   </option>
@@ -323,7 +323,7 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
           <label className="row" style={{ gap: 6 }}>
             Assign to
             <select id={`bt-${tkey}`} value={bt} onChange={(e) => setBt(e.target.value as Team)}>
-              {TEAM_KEYS.map((x) => (
+              {teamKeys().map((x) => (
                 <option key={x} value={x}>
                   {TEAMS[x]}
                 </option>

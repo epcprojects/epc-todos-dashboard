@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { requireSession } from '@/lib/server/auth';
 import { q, tx, type Row } from '@/lib/server/db';
 import { body, handle, json } from '@/lib/server/http';
+import { assertTeams } from '@/lib/server/roles';
 import { mapImports } from '@/lib/server/tasks';
 
 export const dynamic = 'force-dynamic';
@@ -31,7 +32,7 @@ const schema = z.object({
       z.object({
         idx: z.number().int().min(0),
         name: z.string().min(1).max(300),
-        team: z.enum(['designer', 'editor', 'admin', 'unassigned']),
+        team: z.string().min(1).max(40),
         rows: z.number().int().min(0),
         added: z.number().int().min(0),
         updated: z.number().int().min(0),
@@ -49,6 +50,7 @@ const schema = z.object({
 export const POST = handle(async (req: Request) => {
   const { session } = await requireSession(req, ['admin']);
   const b = await body(req, schema);
+  await assertTeams(b.sheets.map((x) => x.team));
   const id = 'i' + Date.now().toString(36) + Math.random().toString(36).slice(2, 5);
   const total = b.sheets.reduce((a, s) => a + s.added, 0);
   await tx([
