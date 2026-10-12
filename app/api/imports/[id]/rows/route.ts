@@ -13,12 +13,12 @@ const rowShape = {
   urls: z.record(z.string(), z.string().max(4000)),
   postDate: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).nullable(),
   dupKey: z.string().max(2000),
-  platform: z.string().max(2000),
-  title: z.string().max(5000),
-  type: z.string().max(2000),
-  pillar: z.string().max(2000),
-  day: z.string().max(200),
-  time: z.string().max(200),
+  platform: z.string().max(10000),
+  title: z.string().max(10000),
+  type: z.string().max(10000),
+  pillar: z.string().max(10000),
+  day: z.string().max(10000),
+  time: z.string().max(10000),
 };
 
 const schema = z.object({
