@@ -164,14 +164,20 @@ export function ManageView() {
 
   useEffect(() => setView(lsGet<'list' | 'grid'>('epc.manage.view', 'list')), []);
 
-  // restore the folder from the URL after a reload ("#/manage/Linkedin/Campaigns/Q4")
+  // restore the folder from the URL after a reload, and follow browser Back / Forward ("/manage/Linkedin/Campaigns/Q4")
   useEffect(() => {
-    const [v, f, ...rest] = readLocation();
-    const top = v === 'manage' && f ? FOLDERS.find((x) => x.key.toLowerCase() === f.toLowerCase()) : null;
-    if (top) {
-      setFolder(top.key);
-      setPath(rest.join('/'));
-    }
+    const read = () => {
+      const [v, f, ...rest] = readLocation();
+      const top = v === 'manage' && f ? FOLDERS.find((x) => x.key.toLowerCase() === f.toLowerCase()) : null;
+      setFolder(top ? top.key : null);
+      setPath(top ? rest.join('/') : '');
+      setSel(new Set());
+      setQ('');
+      setShown(PAGE);
+    };
+    read();
+    window.addEventListener('popstate', read);
+    return () => window.removeEventListener('popstate', read);
   }, []);
 
   const load = useCallback(async () => {

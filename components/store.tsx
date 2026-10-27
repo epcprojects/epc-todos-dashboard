@@ -303,7 +303,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setViewState(readLocation()[0] || lsGet<string>('epc.view', 'dashboard'));
+    const start = readLocation();
+    const v0 = start[0] || lsGet<string>('epc.view', 'dashboard');
+    setViewState(v0);
+    writeLocation(start[0] ? start : [v0], true); // also turns an old "#/page" link into a clean path
+    // browser Back / Forward
+    const onPop = () => setViewState(readLocation()[0] || 'dashboard');
+    window.addEventListener('popstate', onPop);
     (async () => {
       try {
         const i = await refreshInfo();
@@ -321,6 +327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setBoot('error');
       }
     })();
+    return () => window.removeEventListener('popstate', onPop);
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -368,7 +375,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const v = role === 'admin' ? 'dashboard' : 'team';
         setViewState(v);
         lsSet('epc.view', v);
-        writeLocation([v]);
+        writeLocation([v], true);
         return null;
       } catch (e) {
         resetData();
@@ -387,7 +394,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await bootstrap('admin', name);
         setViewState('dashboard');
         lsSet('epc.view', 'dashboard');
-        writeLocation(['dashboard']);
+        writeLocation(['dashboard'], true);
         return null;
       } catch (e) {
         return e instanceof Error ? e.message : 'Could not save the PIN.';

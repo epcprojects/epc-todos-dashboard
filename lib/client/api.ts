@@ -85,17 +85,22 @@ export function lsSet(k: string, v: unknown) {
   }
 }
 
-/** The page the user is on lives in the URL hash ("#/distribution", "#/manage/Linkedin/Q4") so a reload or a shared link returns to it. */
+/** The page the user is on lives in the URL path ("/distribution", "/manage/Linkedin/Q4") so reload, back/forward and shared links all work. */
 export function readLocation(): string[] {
   try {
-    return location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+    // an old "#/reports" style link still works
+    const raw = location.hash.startsWith('#/') ? location.hash.slice(1) : location.pathname;
+    return raw.split('/').filter(Boolean).map(decodeURIComponent);
   } catch {
     return [];
   }
 }
-export function writeLocation(segs: string[]) {
+/** Updates the address bar. Adds a history entry (so Back returns here) unless `replace` is set or the address is already this one. */
+export function writeLocation(segs: string[], replace = false) {
   try {
-    history.replaceState(null, '', '#/' + segs.map(encodeURIComponent).join('/'));
+    const url = '/' + segs.map(encodeURIComponent).join('/');
+    if (!replace && location.pathname === url && !location.hash) return;
+    history[replace ? 'replaceState' : 'pushState'](null, '', url);
   } catch {
     /* ignore */
   }
