@@ -1,8 +1,8 @@
-/** The EPC mark (from favicon_epc.svg): purple on a white tile, so it reads the same in light and dark mode. */
-export function EpcMark({ className = 'size-9' }: { className?: string }) {
+/** The EPC mark (from favicon_epc_wb.svg), transparent background; a lighter purple in dark mode for contrast. */
+export function EpcMark({ className = 'size-9', white }: { className?: string; white?: boolean }) {
   return (
-    <span className={`grid shrink-0 place-items-center rounded-xl bg-white shadow-sm ring-1 ring-black/5 ${className}`} aria-hidden="true">
-      <svg viewBox="106 40 300 432" className="h-[78%] w-[78%]" fill="#673DE6">
+    <span className={`grid shrink-0 place-items-center ${className}`} aria-hidden="true">
+      <svg viewBox="112 48 288 416" className={`h-full w-auto ${white ? 'fill-white' : 'fill-[#673DE6] dark:fill-[#9d7dff]'}`}>
         <path d="M327.757 389.015H203.511C186.439 389.015 160.28 373.385 160.28 356.198C160.28 339.014 171.897 325.356 188.97 325.356H367.454C367.454 325.275 367.462 325.206 367.462 325.038C367.462 290.563 340.121 258.449 310.024 257.071L227.371 256.365C209.94 256.365 187.627 240.894 187.627 223.546C187.627 206.143 197.659 193.463 215.084 193.463H340.632C340.746 191.955 340.783 190.489 340.783 188.97C340.783 154.052 311.698 125.765 276.591 125.765H236.084C201.026 125.765 170.542 154.052 170.542 188.97C170.542 209.41 176.704 225.697 186.861 237.289C190.502 241.456 191.975 251.471 184.897 258.373C180.869 262.279 180.065 263.265 171.222 269.668C154.983 281.505 143.149 301.364 143.149 325.038C143.149 338.287 146.713 350.552 152.732 360.735C157.316 368.508 163.014 371.575 163.014 382.113C163.014 388.302 160.559 394.085 147.299 403.599C131.636 414.777 122.663 433.681 122.663 454.969C122.663 455.286 122.679 455.684 122.679 456H389.325C389.325 455.684 389.338 455.286 389.338 454.969C389.338 420.043 361.74 393.439 327.757 389.015Z" />
         <path d="M256.007 56C245.821 56 237.533 64.2828 237.533 74.473C237.533 84.649 245.821 92.9477 256.007 92.9477C266.183 92.9477 274.477 84.649 274.477 74.473C274.477 64.2828 266.183 56 256.007 56Z" />
       </svg>

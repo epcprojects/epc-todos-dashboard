@@ -115,7 +115,7 @@ function UserMenu() {
         <Avatar className="size-8 rounded-lg">
           <AvatarFallback className="rounded-lg bg-accent text-xs font-bold text-accent-foreground">{initials(session.name || roleName)}</AvatarFallback>
         </Avatar>
-        <div className="grid min-w-0 flex-1 text-left leading-tight">
+        <div className="flex min-w-0 flex-1 flex-col justify-center gap-0.5 text-left leading-tight">
           <span className="truncate text-sm font-semibold">{session.name || roleName}</span>
           <span className="truncate text-xs text-muted-foreground">
             {roleName}

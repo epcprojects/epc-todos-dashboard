@@ -20,7 +20,7 @@ import { EpcMark } from '../EpcMark';
 function Brand({ light }: { light?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <EpcMark className="size-10" />
+      <EpcMark className="size-10" white={light} />
       <div className="leading-tight">
         <div className={`text-lg font-extrabold tracking-tight ${light ? 'text-white' : ''}`}>
           Endpoint <span className={light ? 'text-white/70' : 'text-primary'}>Clients</span>
