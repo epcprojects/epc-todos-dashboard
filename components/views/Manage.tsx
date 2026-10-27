@@ -177,6 +177,13 @@ export function ManageView() {
     void load();
   }, [load]);
 
+  // once every upload has finished, close the panel by itself (kept open when something failed so the error can be read)
+  useEffect(() => {
+    if (running || !uploads.length || uploads.some((u) => u.status === 'failed')) return;
+    const t = setTimeout(() => setUploads([]), 2500);
+    return () => clearTimeout(t);
+  }, [running, uploads]);
+
   useEffect(() => {
     if (!running) return;
     const h = (e: BeforeUnloadEvent) => e.preventDefault();
