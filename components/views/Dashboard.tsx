@@ -52,7 +52,12 @@ function greeting(name: string) {
   const h = new Date().getHours();
   const part = h < 12 ? 'Good morning' : h < 18 ? 'Good afternoon' : 'Good evening';
   const first = name.trim().split(/\s+/)[0];
-  return first ? `${part}, ${first}` : part;
+  return (
+    <>
+      {first ? `${part}, ${first}` : part}{' '}
+      <span aria-hidden="true">👋</span>
+    </>
+  );
 }
 
 function timeAgo(iso: string) {
