@@ -71,22 +71,46 @@ export function uniqueName(name: string, taken: Set<string>): string {
 export interface ManageFile {
   key: string;
   folder: string;
+  /** Sub-folders below `folder`, e.g. "Campaigns/Q4" ('' when the file sits directly in `folder`). */
+  path: string;
   name: string;
   size: number;
   lastModified: string;
 }
 
-/** Validates "Automation-Folder/<known folder>/<file name>"; returns null for anything else (no nesting, no "..", no folder markers). */
-export function parseKey(key: string): { folder: string; name: string } | null {
+/** A folder created in the S3 console (or by an upload): its top-level folder plus the nested path below it. */
+export interface ManageSubfolder {
+  folder: string;
+  path: string;
+}
+
+const badSegment = (s: string) => !s || s === '.' || s === '..';
+
+/** Validates a nested folder path such as "Campaigns/Q4"; returns it cleaned, or null when unsafe. */
+export function cleanPath(raw: string): string | null {
+  const segs = String(raw || '').split('/').filter((x) => x !== '');
+  if (segs.some(badSegment) || segs.join('/').length > 900) return null;
+  return segs.join('/');
+}
+
+/** Validates "Automation-Folder/<known folder>[/<sub folders>]/<file name>"; null for anything else (no "..", no folder markers). */
+export function parseKey(key: string): { folder: string; path: string; name: string } | null {
   const prefix = ROOT_PREFIX + '/';
   if (!key.startsWith(prefix)) return null;
-  const rest = key.slice(prefix.length);
-  const i = rest.indexOf('/');
-  if (i <= 0) return null;
-  const folder = rest.slice(0, i);
-  const name = rest.slice(i + 1);
-  if (!folderByKey(folder) || !name || name.includes('/') || name === '.' || name === '..') return null;
-  return { folder, name };
+  const segs = key.slice(prefix.length).split('/');
+  if (segs.length < 2) return null;
+  const [folder, ...rest] = segs;
+  const name = rest.pop() as string;
+  if (!folderByKey(folder) || badSegment(name) || rest.some(badSegment)) return null;
+  return { folder, path: rest.join('/'), name };
+}
+
+/** A folder marker object ("Automation-Folder/Linkedin/Campaigns/") as made by the S3 console; null for files and top-level folders. */
+export function parseFolderKey(key: string): ManageSubfolder | null {
+  if (!key.endsWith('/')) return null;
+  const segs = key.slice(0, -1).split('/');
+  if (segs[0] !== ROOT_PREFIX || segs.length < 3 || segs.slice(1).some(badSegment) || !folderByKey(segs[1])) return null;
+  return { folder: segs[1], path: segs.slice(2).join('/') };
 }
 
 export function formatBytes(n: number): string {

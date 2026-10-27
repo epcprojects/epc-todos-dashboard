@@ -1,7 +1,7 @@
 'use client';
 import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, LayoutGrid, List, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, type ManageFile } from '@/lib/manage-config';
+import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, type ManageFile, type ManageSubfolder } from '@/lib/manage-config';
 import { api, lsGet, lsSet, sleep } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
 import { fmtDT } from '@/lib/dates';
@@ -142,7 +142,9 @@ export function ManageView() {
   const [files, setFiles] = useState<ManageFile[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState('');
+  const [subfolders, setSubfolders] = useState<ManageSubfolder[]>([]);
   const [folder, setFolder] = useState<string | null>(null);
+  const [path, setPath] = useState('');
   const [view, setView] = useState<'list' | 'grid'>('list');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<SortKey>('name');
@@ -162,8 +164,9 @@ export function ManageView() {
 
   const load = useCallback(async () => {
     try {
-      const r = await api<{ files: ManageFile[] }>('/api/manage/files');
+      const r = await api<{ files: ManageFile[]; folders: ManageSubfolder[] }>('/api/manage/files');
       setFiles(r.files);
+      setSubfolders(r.folders);
       setErr('');
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load the files.');
@@ -181,7 +184,28 @@ export function ManageView() {
     return () => window.removeEventListener('beforeunload', h);
   }, [running]);
 
-  const inFolder = useMemo(() => (folder ? files.filter((f) => f.folder === folder) : []), [files, folder]);
+  const inFolder = useMemo(() => (folder ? files.filter((f) => f.folder === folder && f.path === path) : []), [files, folder, path]);
+  // folders directly below the current location: from file paths and from folder markers (empty folders made in S3)
+  const children = useMemo(() => {
+    if (!folder) return [];
+    const base = path ? path + '/' : '';
+    const m = new Map<string, { n: number; bytes: number }>();
+    const add = (p: string) => {
+      if (!p.startsWith(base) || p === path) return null;
+      const name = p.slice(base.length).split('/')[0];
+      if (!m.has(name)) m.set(name, { n: 0, bytes: 0 });
+      return m.get(name) as { n: number; bytes: number };
+    };
+    subfolders.filter((d) => d.folder === folder).forEach((d) => add(d.path));
+    files.filter((f) => f.folder === folder).forEach((f) => {
+      const c = add(f.path);
+      if (c) {
+        c.n++;
+        c.bytes += f.size;
+      }
+    });
+    return [...m.entries()].map(([name, v]) => ({ name, ...v })).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
+  }, [files, subfolders, folder, path]);
   const list = useMemo(() => {
     const term = q.trim().toLowerCase();
     const l = term ? inFolder.filter((f) => f.name.toLowerCase().includes(term)) : [...inFolder];
@@ -241,8 +265,9 @@ export function ManageView() {
     };
   }, [view, visible, thumbs]);
 
-  const open = (f: string | null) => {
+  const open = (f: string | null, p = '') => {
     setFolder(f);
+    setPath(p);
     setSel(new Set());
     setQ('');
     setShown(PAGE);
@@ -282,7 +307,7 @@ export function ManageView() {
     for (let i = 0; i < ok.length; i += MAX_FILES_PER_UPLOAD_REQUEST) {
       const chunk = ok.slice(i, i + MAX_FILES_PER_UPLOAD_REQUEST);
       try {
-        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { folder, files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
+        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { folder, path, files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
         chunk.forEach((c, k) => queue.push({ item: c, target: r.targets[k] }));
       } catch (e) {
         chunk.forEach((c) => patch(c.id, { status: 'failed', error: e instanceof Error ? e.message : 'Could not start the upload.' }));
@@ -375,7 +400,25 @@ export function ManageView() {
             {ROOT_PREFIX}
           </button>
           <span aria-hidden="true">›</span>
-          <b>{label(folder)}</b>
+          {path ? (
+            <button className="linkish" onClick={() => open(folder)}>
+              {label(folder)}
+            </button>
+          ) : (
+            <b>{label(folder)}</b>
+          )}
+          {path.split('/').filter(Boolean).map((seg, i, a) => (
+            <span key={i} className="contents">
+              <span aria-hidden="true">›</span>
+              {i === a.length - 1 ? (
+                <b>{seg}</b>
+              ) : (
+                <button className="linkish" onClick={() => open(folder, a.slice(0, i + 1).join('/'))}>
+                  {seg}
+                </button>
+              )}
+            </span>
+          ))}
         </>
       ) : (
         <b>{ROOT_PREFIX}</b>
@@ -430,7 +473,7 @@ export function ManageView() {
             <div className="mg-bar">
               <label className="field mg-search">
                 <span>Search files</span>
-                <input className="inp" type="search" value={q} placeholder={`Search in ${label(folder)}…`} onChange={(e) => { setQ(e.target.value); setShown(PAGE); }} />
+                <input className="inp" type="search" value={q} placeholder={`Search in ${path.split('/').pop() || label(folder)}…`} onChange={(e) => { setQ(e.target.value); setShown(PAGE); }} />
               </label>
               <label className="field">
                 <span>Sort by</span>
@@ -474,13 +517,28 @@ export function ManageView() {
               </div>
             )}
 
-            {over && <div className="mg-drop">Drop files to upload to {label(folder)}</div>}
+            {over && <div className="mg-drop">Drop files to upload to {path.split('/').pop() || label(folder)}</div>}
 
+            {children.length > 0 && !q && (
+              <div className="mg-folders" style={{ marginBottom: 16 }}>
+                {children.map((c) => (
+                  <button key={c.name} className="mg-folder" onClick={() => open(folder, path ? `${path}/${c.name}` : c.name)}>
+                    <FolderIcon size={44} />
+                    <b>{c.name}</b>
+                    <span className="muted small">
+                      {c.n} {c.n === 1 ? 'file' : 'files'} · {formatBytes(c.bytes)}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            )}
             {!list.length ? (
+              children.length > 0 && !q ? null : (
               <div className="empty">
                 <h2>{inFolder.length ? 'No files match your search.' : 'This folder is empty.'}</h2>
                 <p className="muted">{inFolder.length ? 'Try a different search.' : 'Upload files with the button above, or drag them onto this page.'}</p>
               </div>
+              )
             ) : view === 'list' ? (
               <div className="tw">
                 <table className="t">

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { extOf, formatBytes, isAllowedName, parseKey, sanitizeName, uniqueName, MAX_FILE_BYTES } from '@/lib/manage-config';
+import { extOf, formatBytes, isAllowedName, cleanPath, parseFolderKey, parseKey, sanitizeName, uniqueName, MAX_FILE_BYTES } from '@/lib/manage-config';
 
 describe('manage: file names', () => {
   it('renames duplicates to "name (1)", "name (2)" and ignores case', () => {
@@ -37,14 +37,27 @@ describe('manage: allowed file types', () => {
 });
 
 describe('manage: keys', () => {
-  it('accepts files directly inside a known folder only', () => {
-    expect(parseKey('Automation-Folder/Linkedin/a.png')).toEqual({ folder: 'Linkedin', name: 'a.png' });
+  it('accepts files at any depth inside a known folder', () => {
+    expect(parseKey('Automation-Folder/Linkedin/a.png')).toEqual({ folder: 'Linkedin', path: '', name: 'a.png' });
+    expect(parseKey('Automation-Folder/Linkedin/Q4/Reels/a.png')).toEqual({ folder: 'Linkedin', path: 'Q4/Reels', name: 'a.png' });
+    expect(parseKey('Automation-Folder/Linkedin/Q4/../a.png')).toBeNull();
+    expect(parseKey('Automation-Folder/Linkedin/Q4//a.png')).toBeNull();
     expect(parseKey('Automation-Folder/Linkedin/')).toBeNull();
-    expect(parseKey('Automation-Folder/Linkedin/sub/a.png')).toBeNull();
+    expect(parseKey('Automation-Folder/Linkedin/sub/')).toBeNull();
     expect(parseKey('Automation-Folder/Other/a.png')).toBeNull();
     expect(parseKey('Automation-Folder/a.png')).toBeNull();
     expect(parseKey('Elsewhere/Linkedin/a.png')).toBeNull();
     expect(parseKey('Automation-Folder/Linkedin/..')).toBeNull();
+  });
+  it('recognises folder markers and cleans nested paths', () => {
+    expect(parseFolderKey('Automation-Folder/Linkedin/Q4/')).toEqual({ folder: 'Linkedin', path: 'Q4' });
+    expect(parseFolderKey('Automation-Folder/Linkedin/')).toBeNull();
+    expect(parseFolderKey('Automation-Folder/Linkedin/Q4/a.png')).toBeNull();
+    expect(parseFolderKey('Automation-Folder/Nope/Q4/')).toBeNull();
+    expect(cleanPath('Q4/Reels')).toBe('Q4/Reels');
+    expect(cleanPath('')).toBe('');
+    expect(cleanPath('/Q4//Reels/')).toBe('Q4/Reels');
+    expect(cleanPath('Q4/../x')).toBeNull();
   });
   it('limits and formatting', () => {
     expect(MAX_FILE_BYTES).toBe(5 * 1024 ** 3);
