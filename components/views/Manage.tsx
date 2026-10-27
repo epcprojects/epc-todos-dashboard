@@ -1,7 +1,7 @@
 'use client';
 import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, LayoutGrid, List, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, type ManageFile, type ManageSubfolder } from '@/lib/manage-config';
+import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, sanitizeName, type ManageFile, type ManageSubfolder } from '@/lib/manage-config';
 import { api, lsGet, lsSet, sleep } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
 import { fmtDT } from '@/lib/dates';
@@ -23,6 +23,7 @@ interface UploadItem {
 interface Target {
   name: string;
   renamed: boolean;
+  replaced?: boolean;
   key: string;
   url: string;
   fields: Record<string, string>;
@@ -156,6 +157,8 @@ export function ManageView() {
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [pv, setPv] = useState<string | null>(null);
+  const [clash, setClash] = useState<{ picked: File[]; names: string[] } | null>(null);
+  const [clashMode, setClashMode] = useState<'replace' | 'keep'>('replace');
   const fileIn = useRef<HTMLInputElement>(null);
   const uid = useRef(1);
   const running = uploads.some((u) => u.status === 'queued' || u.status === 'uploading');
@@ -295,8 +298,18 @@ export function ManageView() {
   /* ---------- upload ---------- */
   const patch = (id: number, p: Partial<UploadItem>) => setUploads((u) => u.map((x) => (x.id === id ? { ...x, ...p } : x)));
 
-  const startUpload = async (picked: File[]) => {
+  const startUpload = async (picked: File[], onExisting?: 'replace' | 'keep') => {
     if (!folder || !picked.length) return;
+    if (!onExisting) {
+      // same name already in this folder: ask whether to replace it or keep both
+      const have = new Set(inFolder.map((f) => f.name.toLowerCase()));
+      const names = picked.map((f) => sanitizeName(f.name)).filter((n) => have.has(n.toLowerCase()));
+      if (names.length) {
+        setClashMode('replace');
+        setClash({ picked, names: [...new Set(names)] });
+        return;
+      }
+    }
     const ok: { file: File; id: number }[] = [];
     const rejected: UploadItem[] = [];
     for (const file of picked) {
@@ -314,7 +327,7 @@ export function ManageView() {
     for (let i = 0; i < ok.length; i += MAX_FILES_PER_UPLOAD_REQUEST) {
       const chunk = ok.slice(i, i + MAX_FILES_PER_UPLOAD_REQUEST);
       try {
-        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { folder, path, files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
+        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { folder, path, replace: onExisting === 'replace', files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
         chunk.forEach((c, k) => queue.push({ item: c, target: r.targets[k] }));
       } catch (e) {
         chunk.forEach((c) => patch(c.id, { status: 'failed', error: e instanceof Error ? e.message : 'Could not start the upload.' }));
@@ -325,7 +338,7 @@ export function ManageView() {
     const worker = async () => {
       while (next < queue.length) {
         const { item, target } = queue[next++];
-        patch(item.id, { status: 'uploading', note: target.renamed ? `Saved as ${target.name}` : undefined });
+        patch(item.id, { status: 'uploading', note: target.renamed ? `Saved as ${target.name}` : target.replaced ? 'Replaced the existing file' : undefined });
         try {
           await uploadToS3(target.url, target.fields, item.file, (p) => patch(item.id, { progress: p })).promise;
           patch(item.id, { status: 'done', progress: 1 });
@@ -635,11 +648,61 @@ export function ManageView() {
             <p className="muted small" style={{ margin: '12px 0 0' }}>
               {list.length} {list.length === 1 ? 'file' : 'files'}
               {q ? ' found' : ''} · largest upload {formatBytes(MAX_FILE_BYTES)}
-              {ALLOWED_EXTENSIONS.length ? ` · allowed types: ${ALLOWED_EXTENSIONS.join(', ')}` : ''}. A file with a name that already exists is saved as “name (1)”.
+              {ALLOWED_EXTENSIONS.length ? ` · allowed types: ${ALLOWED_EXTENSIONS.join(', ')}` : ''}. If a name already exists you can replace the file or keep both.
             </p>
           </>
         )}
       </section>
+
+      <Dialog open={!!clash} onOpenChange={(o) => !o && setClash(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle className="text-lg font-semibold">Upload options</DialogTitle>
+          <DialogDescription className="text-sm leading-relaxed">
+            {clash && clash.names.length === 1 ? (
+              <>
+                <b className="text-foreground">{clash.names[0]}</b> already exists in this location.
+              </>
+            ) : (
+              <>
+                <b className="text-foreground">{clash?.names.length} files</b> already exist in this location
+                {clash ? ` (${clash.names.slice(0, 3).join(', ')}${clash.names.length > 3 ? ', …' : ''})` : ''}.
+              </>
+            )}{' '}
+            Do you want to replace the existing {clash && clash.names.length === 1 ? 'file' : 'files'} with the new {clash && clash.names.length === 1 ? 'version' : 'versions'} or keep both?
+          </DialogDescription>
+          <div className="grid gap-1" role="radiogroup" aria-label="Upload options">
+            {(
+              [
+                ['replace', 'Replace existing file'],
+                ['keep', 'Keep both files'],
+              ] as const
+            ).map(([v, text]) => (
+              <label key={v} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-muted">
+                <input type="radio" name="clash-mode" className="size-4 accent-[var(--primary)]" checked={clashMode === v} onChange={() => setClashMode(v)} />
+                <span className="text-sm font-medium">
+                  {text}
+                  {v === 'keep' ? <span className="block text-[13px] font-normal text-muted-foreground">The new file is saved as “name (1)”.</span> : <span className="block text-[13px] font-normal text-muted-foreground">The old version is overwritten and cannot be recovered.</span>}
+                </span>
+              </label>
+            ))}
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <Button variant="ghost" size="lg" onClick={() => setClash(null)}>
+              Cancel
+            </Button>
+            <Button
+              size="lg"
+              onClick={() => {
+                const c = clash;
+                setClash(null);
+                if (c) void startUpload(c.picked, clashMode);
+              }}
+            >
+              Upload
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {pvFile && (
         <PreviewDialog
