@@ -7,6 +7,7 @@ import { statusPatch } from '@/lib/status';
 import { emptyFilters, ingest, type CTask, type TableFilters } from '@/lib/tasks';
 import { api, ApiFail, lsGet, lsSet, setUnauthorizedHandler, withRetry } from '@/lib/client/api';
 import type { PeriodKind } from '@/lib/metrics';
+import { toast as sonner } from 'sonner';
 
 export interface TableState {
   q: string;
@@ -83,7 +84,6 @@ interface Ctx {
   drafts: Record<string, Record<string, string>>;
   setDraft: (id: string, k: string, v: string | null) => void;
   toast: (msg: string, tone?: 'bad', sticky?: boolean) => ToastHandle;
-  toasts: ToastItem[];
   confirmState: ConfirmState | null;
   confirmBox: (o: ConfirmOpts) => Promise<boolean>;
   closeConfirm: (v: boolean) => void;
@@ -159,7 +159,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [rep, setRep] = useState<{ kind: PeriodKind; off: number }>({ kind: 'week', off: 0 });
   const [drawerId, setDrawerId] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Record<string, string>>>({});
-  const [toasts, setToasts] = useState<ToastItem[]>([]);
   const [confirmState, setConfirmState] = useState<ConfirmState | null>(null);
   const [ver, setVer] = useState(0);
   const [, setTick] = useState(0);
@@ -169,7 +168,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const pendingRef = useRef<Map<string, number>>(new Map());
   const queuesRef = useRef<Map<string, Promise<unknown>>>(new Map());
   const pollBusy = useRef(false);
-  const toastId = useRef(1);
   const viewRef = useRef(view);
   const roleRef = useRef<Role | null>(null);
   viewRef.current = view;
@@ -179,13 +177,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
   /* ---------- toasts & confirm ---------- */
   const toast = useCallback((msg: string, tone?: 'bad', sticky?: boolean): ToastHandle => {
-    const id = toastId.current++;
-    setToasts((l) => [...l, { id, msg, tone }]);
-    const close = (after = 0) => setTimeout(() => setToasts((l) => l.filter((x) => x.id !== id)), after);
-    if (!sticky) close(tone === 'bad' ? 6000 : 3200);
+    const dur = (t?: 'bad') => (sticky ? Infinity : t === 'bad' ? 6000 : 3200);
+    const show = (m: string, t: 'bad' | undefined, id?: string | number) => (t === 'bad' ? sonner.error(m, { id, duration: dur(t) }) : sonner.success(m, { id, duration: dur(t) }));
+    const id = show(msg, tone);
     return {
-      set: (m, t) => setToasts((l) => l.map((x) => (x.id === id ? { ...x, msg: m, tone: t ?? x.tone } : x))),
-      close,
+      set: (m, t) => void show(m, t ?? tone, id),
+      close: (after = 0) => void setTimeout(() => sonner.dismiss(id), after),
     };
   }, []);
 
@@ -313,6 +310,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
         if (i.authenticated && i.role) await bootstrap(i.role, i.name || '');
         setBoot('ready');
       } catch (e) {
+        if (e instanceof ApiFail && e.status === 401) {
+          // the saved login is no longer valid (PIN changed, role removed): show the login screen
+          resetData();
+          await refreshInfo().catch(() => {});
+          setBoot('ready');
+          return;
+        }
         setBootError(e instanceof Error ? e.message : 'Could not load the dashboard.');
         setBoot('error');
       }
@@ -323,6 +327,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   // 401 anywhere (cookie gone, or the PIN for this role was changed): back to the login screen.
   useEffect(() => {
     setUnauthorizedHandler(() => {
+      setBoot((b) => (b === 'loading' ? 'ready' : b));
       if (!roleRef.current) return;
       resetData();
       void refreshInfo().catch(() => {});
@@ -695,7 +700,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     drafts,
     setDraft,
     toast,
-    toasts,
     confirmState,
     confirmBox,
     closeConfirm,

@@ -1,5 +1,6 @@
 'use client';
 import { useReducer, useRef, useState } from 'react';
+import { UploadCloud } from 'lucide-react';
 import { norm, suggestTeam } from '@/lib/text';
 import { XLSX, type WizSheet } from '@/lib/excel';
 import { useApp } from '../store';
@@ -75,6 +76,9 @@ export function ImportPage() {
           void onFile(e.dataTransfer.files[0]);
         }}
       >
+        <div className="grid size-14 place-items-center rounded-2xl bg-accent text-accent-foreground">
+          <UploadCloud className="size-7" />
+        </div>
         <h2>Upload Content Excel</h2>
         <p className="muted" style={{ margin: 0 }}>
           .xlsx, .xls, .xlsm or .csv · the workbook is analyzed in your browser first, nothing is imported automatically

@@ -149,7 +149,7 @@ export function ImportsView() {
                       {imp.status === 'incomplete' ? (
                         <>
                           {' · '}
-                          <b style={{ color: 'var(--bad-fg)' }}>{imp.errors} rows failed to save</b>
+                          <b style={{ color: 'var(--danger)' }}>{imp.errors} rows failed to save</b>
                         </>
                       ) : null}
                     </div>

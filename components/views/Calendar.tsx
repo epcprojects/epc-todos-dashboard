@@ -121,7 +121,7 @@ export function CalendarView() {
             selList.length ? (
               <div className="stack" style={{ gap: 8 }}>
                 {selList.map((t) => (
-                  <div key={t.id} style={{ borderBottom: '1px solid var(--line)', paddingBottom: 8 }}>
+                  <div key={t.id} style={{ borderBottom: '1px solid var(--border)', paddingBottom: 8 }}>
                     <div className="row" style={{ gap: 6 }}>
                       <PlatPills value={t.platform} />
                       {t.type ? <span className="tag">{t.type}</span> : null}

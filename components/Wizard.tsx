@@ -265,7 +265,7 @@ export function Wizard({ w, bump, close }: { w: Wiz; bump: () => void; close: ()
               <span style={{ flex: 1 }}>
                 <b>{s.name}</b>
               </span>
-              <span className="muted small num">{s.est > 0 ? `about ${s.est} rows` : 'empty'}</span>
+              <span className="muted small num">{s.est > 0 ? `about ${s.est} ${s.est === 1 ? 'row' : 'rows'}` : 'empty'}</span>
               {s.suggested !== 'unassigned' ? <span className="tag">Looks like {TEAMS[s.suggested]} work</span> : null}
             </label>
           ))}
@@ -462,7 +462,7 @@ export function Wizard({ w, bump, close }: { w: Wiz; bump: () => void; close: ()
                 {prevRows.map((r) => (
                   <tr key={r.excelRow}>
                     <td className="num">{r.excelRow}</td>
-                    {s.map!.date >= 0 ? <td className="num">{r.date ? fmtDate(r.date) : <b style={{ color: 'var(--bad-fg)' }}>Unreadable</b>}</td> : null}
+                    {s.map!.date >= 0 ? <td className="num">{r.date ? fmtDate(r.date) : <b style={{ color: 'var(--danger)' }}>Unreadable</b>}</td> : null}
                     {r.vals.map((v, j) => (
                       <td key={j}>
                         <div className="clip">

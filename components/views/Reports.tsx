@@ -201,7 +201,7 @@ export function Reports() {
               </>
             ) : null}
             <dt>Overdue</dt>
-            <dd className="num" style={M.od ? { color: 'var(--bad-fg)', fontWeight: 700 } : undefined}>
+            <dd className="num" style={M.od ? { color: 'var(--danger)', fontWeight: 700 } : undefined}>
               {M.od}
             </dd>
             <dt>Designer completion</dt>
@@ -231,7 +231,7 @@ export function Reports() {
             </dd>
           </dl>
         </section>
-        <div className="kpis">
+        <div className="kpis cols-6">
           <Kpi label="Scheduled" value={M.sch} sub="Posting date in period" />
           <Kpi label="Completed" value={M.done} sub={M.pct + '% of scheduled'} tone="good" />
           <Kpi label="Remaining" value={M.rem} />
@@ -244,11 +244,11 @@ export function Reports() {
             <h2>{chartTitle}</h2>
             <div className="legend">
               <span>
-                <i style={{ background: 'var(--c-des)' }} />
+                <i style={{ background: 'var(--chart-1)' }} />
                 Graphic Designer
               </span>
               <span>
-                <i style={{ background: 'var(--c-ed)' }} />
+                <i style={{ background: 'var(--chart-2)' }} />
                 Video Editor
               </span>
             </div>

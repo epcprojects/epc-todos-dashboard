@@ -1,45 +1,37 @@
 'use client';
-import { useEffect, useRef } from 'react';
+import { TriangleAlert } from 'lucide-react';
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from '@/components/ui/alert-dialog';
+import { Toaster } from '@/components/ui/sonner';
 import { useApp } from './store';
 
+/** Confirmation before anything destructive (delete, archive, reassign …). Escape or Cancel keeps everything as it was. */
 export function ConfirmDialog() {
   const { confirmState: c, closeConfirm } = useApp();
-  const cancel = useRef<HTMLButtonElement>(null);
-  useEffect(() => {
-    if (c) setTimeout(() => cancel.current?.focus(), 30);
-  }, [c]);
-  if (!c) return null;
   return (
-    <div className="modal-wrap" style={{ zIndex: 70 }} role="alertdialog" aria-modal="true" aria-label={c.title}>
-      <div className="modal narrow">
-        <div className="mh">
-          <h2>{c.title}</h2>
-        </div>
-        <div className="mb">
-          <p style={{ margin: 0 }}>{c.body}</p>
-        </div>
-        <div className="mf">
-          <button className="btn" ref={cancel} onClick={() => closeConfirm(false)}>
-            Cancel
-          </button>
-          <button className={`btn ${c.danger ? 'danger' : 'primary'}`} onClick={() => closeConfirm(true)}>
-            {c.ok}
-          </button>
-        </div>
-      </div>
-    </div>
+    <AlertDialog open={!!c} onOpenChange={(o) => !o && closeConfirm(false)}>
+      {c ? (
+        <AlertDialogContent className="data-[size=default]:sm:max-w-md">
+          <AlertDialogHeader className="items-start text-left sm:place-items-start">
+            {c.danger ? (
+              <div className="mb-1 grid size-10 place-items-center rounded-full bg-danger-soft text-danger">
+                <TriangleAlert className="size-5" />
+              </div>
+            ) : null}
+            <AlertDialogTitle className="text-base font-bold">{c.title}</AlertDialogTitle>
+            <AlertDialogDescription className="text-sm leading-relaxed text-muted-foreground">{c.body}</AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel autoFocus>Cancel</AlertDialogCancel>
+            <AlertDialogAction variant={c.danger ? 'destructive' : 'default'} className={c.danger ? 'bg-destructive text-white hover:bg-destructive/90' : ''} onClick={() => closeConfirm(true)}>
+              {c.ok}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      ) : null}
+    </AlertDialog>
   );
 }
 
 export function Toasts() {
-  const { toasts } = useApp();
-  return (
-    <div id="toasts" aria-live="polite">
-      {toasts.map((t) => (
-        <div key={t.id} className={`toast${t.tone === 'bad' ? ' bad' : ''}`}>
-          {t.msg}
-        </div>
-      ))}
-    </div>
-  );
+  return <Toaster position="bottom-right" richColors closeButton />;
 }

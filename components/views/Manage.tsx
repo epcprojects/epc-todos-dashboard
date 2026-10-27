@@ -323,7 +323,7 @@ export function ManageView() {
                 </select>
               </label>
               <button className="btn" onClick={() => setDesc((d) => !d)} aria-label="Reverse sort order" title="Reverse sort order">
-                {desc ? 'Z → A / Largest first' : 'A → Z / Smallest first'}
+                {sort === 'name' ? (desc ? 'Z → A' : 'A → Z') : sort === 'size' ? (desc ? 'Largest first' : 'Smallest first') : desc ? 'Newest first' : 'Oldest first'}
               </button>
               <div className="row" role="group" aria-label="View">
                 <button className={`btn ${view === 'list' ? 'primary' : ''}`} aria-pressed={view === 'list'} onClick={() => changeView('list')}>
@@ -480,9 +480,9 @@ export function ManageView() {
                   </span>
                 </div>
                 <div className="progressbar" style={{ height: 8 }}>
-                  <i style={{ width: `${Math.round(u.progress * 100)}%`, background: u.status === 'failed' ? 'var(--bad-fg)' : undefined }} />
+                  <i style={{ width: `${Math.round(u.progress * 100)}%`, background: u.status === 'failed' ? 'var(--danger)' : undefined }} />
                 </div>
-                {u.error ? <div className="small" style={{ color: 'var(--bad-fg)' }}>{u.error}</div> : u.note ? <div className="small muted">{u.note}</div> : null}
+                {u.error ? <div className="small" style={{ color: 'var(--danger)' }}>{u.error}</div> : u.note ? <div className="small muted">{u.note}</div> : null}
               </li>
             ))}
           </ul>

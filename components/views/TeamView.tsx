@@ -61,7 +61,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
     <>
       {head}
       <div className="stack">
-        <div className="kpis">
+        <div className="kpis cols-6">
           {k("Today's tasks", scheduledToday.length, `${scheduledToday.filter((t) => t.status === 'completed').length} done`, '', 'today')}
           {k('Completed today', doneToday, 'Marked completed today', 'good', 'donetoday')}
           {k('In progress', ip, '', '', 'in_progress')}

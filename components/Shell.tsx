@@ -1,6 +1,15 @@
 'use client';
+import { BarChart3, CalendarDays, ChevronsUpDown, Clapperboard, FileUp, FolderOpen, History, LayoutDashboard, ListChecks, ListTodo, LogOut, Monitor, Moon, PenTool, Settings, Sun, Users, type LucideIcon } from 'lucide-react';
+import { useTheme } from 'next-themes';
 import { ROLES } from '@/lib/constants';
 import { isOverdue } from '@/lib/metrics';
+import { Avatar, AvatarFallback } from '@/components/ui/avatar';
+import { Breadcrumb, BreadcrumbItem, BreadcrumbList, BreadcrumbPage, BreadcrumbSeparator } from '@/components/ui/breadcrumb';
+import { Button } from '@/components/ui/button';
+import { DropdownMenu, DropdownMenuContent, DropdownMenuGroup, DropdownMenuItem, DropdownMenuLabel, DropdownMenuRadioGroup, DropdownMenuRadioItem, DropdownMenuSeparator, DropdownMenuTrigger } from '@/components/ui/dropdown-menu';
+import { Separator } from '@/components/ui/separator';
+import { Sidebar, SidebarContent, SidebarFooter, SidebarGroup, SidebarGroupContent, SidebarGroupLabel, SidebarHeader, SidebarInset, SidebarMenu, SidebarMenuBadge, SidebarMenuButton, SidebarMenuItem, SidebarProvider, SidebarRail, SidebarTrigger, useSidebar } from '@/components/ui/sidebar';
+import { Skeleton } from '@/components/ui/skeleton';
 import { useApp } from './store';
 import { LoginView } from './views/Login';
 import { Dashboard } from './views/Dashboard';
@@ -13,57 +22,233 @@ import { SettingsView } from './views/Settings';
 import { ImportPage } from './views/ImportPage';
 import { ManageView } from './views/Manage';
 
-type NavItem = [string, string, { n: number; bad?: boolean } | null];
+interface NavItem {
+  key: string;
+  label: string;
+  icon: LucideIcon;
+  badge?: { n: number; bad?: boolean } | null;
+}
+interface NavGroup {
+  label: string;
+  items: NavItem[];
+}
 
-function useNavItems(): NavItem[] {
+function useNavGroups(): NavGroup[] {
   const { role, act, today, imports, customRoles } = useApp();
   if (!role) return [];
   const teamOf = (team: string) => act.filter((t) => t.team === team);
+  const open = (team: string) => teamOf(team).filter((t) => t.status !== 'completed').length;
   if (role === 'admin') {
     const od = act.filter((t) => isOverdue(t, today)).length;
     return [
-      ['dashboard', 'Dashboard', od ? { n: od, bad: true } : null],
-      ['import', 'Content Import', null],
-      ['distribution', 'Task Distribution', { n: act.length }],
-      ['designer', 'Designer', { n: teamOf('designer').filter((t) => t.status !== 'completed').length }],
-      ['editor', 'Video Editor', { n: teamOf('editor').filter((t) => t.status !== 'completed').length }],
-      ...customRoles.map((c): NavItem => ['team:' + c.key, c.name, { n: teamOf(c.key).filter((t) => t.status !== 'completed').length }]),
-      ['calendar', 'Calendar / Schedule', null],
-      ['reports', 'Reports', null],
-      ['imports', 'Imports', { n: imports.length }],
-      ['manage', 'Manage', null],
-      ['settings', 'Settings', null],
+      { label: 'Overview', items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: od ? { n: od, bad: true } : null }] },
+      {
+        label: 'Production',
+        items: [
+          { key: 'import', label: 'Content Import', icon: FileUp },
+          { key: 'distribution', label: 'Task Distribution', icon: ListChecks, badge: { n: act.length } },
+          { key: 'designer', label: 'Designer', icon: PenTool, badge: { n: open('designer') } },
+          { key: 'editor', label: 'Video Editor', icon: Clapperboard, badge: { n: open('editor') } },
+          ...customRoles.map((c): NavItem => ({ key: 'team:' + c.key, label: c.name, icon: Users, badge: { n: open(c.key) } })),
+        ],
+      },
+      {
+        label: 'Planning',
+        items: [
+          { key: 'calendar', label: 'Calendar / Schedule', icon: CalendarDays },
+          { key: 'reports', label: 'Reports', icon: BarChart3 },
+        ],
+      },
+      {
+        label: 'Workspace',
+        items: [
+          { key: 'imports', label: 'Imports', icon: History, badge: { n: imports.length } },
+          { key: 'manage', label: 'Manage', icon: FolderOpen },
+          { key: 'settings', label: 'Settings', icon: Settings },
+        ],
+      },
     ];
   }
   const mine = teamOf(role);
   const od = mine.filter((t) => isOverdue(t, today)).length;
   return [
-    ['team', 'My Tasks', od ? { n: od, bad: true } : { n: mine.filter((t) => t.status !== 'completed').length }],
-    ['calendar', 'Calendar', null],
-    ['manage', 'Manage', null],
+    {
+      label: 'Workspace',
+      items: [
+        { key: 'team', label: 'My Tasks', icon: ListTodo, badge: od ? { n: od, bad: true } : { n: open(role) } },
+        { key: 'calendar', label: 'Calendar', icon: CalendarDays },
+        { key: 'manage', label: 'Manage', icon: FolderOpen },
+      ],
+    },
   ];
 }
 
-export function Shell() {
-  const { boot, bootError, role, baseRole, session, viewAs, setViewAs, view, nav, logout, loaded, setView } = useApp();
-  const items = useNavItems();
-  const cur = items.map((x) => x[0]).includes(view) ? view : items[0]?.[0] || '';
+function initials(name: string) {
+  const p = name.trim().split(/\s+/).filter(Boolean);
+  return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '·';
+}
 
-  let main: React.ReactNode;
-  if (boot === 'loading') main = <div className="loading">Loading production data…</div>;
-  else if (boot === 'error')
-    main = (
-      <div className="empty">
-        <h2>The dashboard could not start</h2>
-        <p className="muted">{bootError}</p>
-        <button className="btn primary" onClick={() => location.reload()}>
-          Try again
-        </button>
+function BrandMark() {
+  return (
+    <div className="flex items-center gap-2.5 px-1.5 py-1">
+      <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+        {/* stacked tiers, echoing the Endpoint mark */}
+        <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">
+          <rect x="4" y="3.5" width="16" height="4.2" rx="2.1" />
+          <rect x="4" y="9.9" width="12" height="4.2" rx="2.1" opacity=".85" />
+          <rect x="4" y="16.3" width="16" height="4.2" rx="2.1" opacity=".7" />
+        </svg>
+      </div>
+      <div className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
+        <div className="truncate text-[15px] font-extrabold tracking-tight">
+          Endpoint <span className="text-primary">Clients</span>
+        </div>
+        <div className="truncate text-xs text-muted-foreground">Production Dashboard</div>
+      </div>
+    </div>
+  );
+}
+
+function UserMenu() {
+  const { session, baseRole, viewAs, logout } = useApp();
+  const { theme, setTheme } = useTheme();
+  if (!session) return null;
+  const roleName = ROLES[baseRole!] || '';
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger render={<SidebarMenuButton size="lg" className="h-12" />}>
+        <Avatar className="size-8 rounded-lg">
+          <AvatarFallback className="rounded-lg bg-accent text-xs font-bold text-accent-foreground">{initials(session.name || roleName)}</AvatarFallback>
+        </Avatar>
+        <div className="grid min-w-0 flex-1 text-left leading-tight">
+          <span className="truncate text-sm font-semibold">{session.name || roleName}</span>
+          <span className="truncate text-xs text-muted-foreground">
+            {roleName}
+            {viewAs ? ' · previewing' : ''}
+          </span>
+        </div>
+        <ChevronsUpDown className="ml-auto size-4 text-muted-foreground" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent side="top" align="start" className="w-60">
+        <DropdownMenuGroup>
+          <DropdownMenuLabel className="text-xs text-muted-foreground">Appearance</DropdownMenuLabel>
+          <DropdownMenuRadioGroup value={theme || 'system'} onValueChange={(v) => setTheme(String(v))}>
+            <DropdownMenuRadioItem value="light">
+              <Sun className="size-4" /> Light
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="dark">
+              <Moon className="size-4" /> Dark
+            </DropdownMenuRadioItem>
+            <DropdownMenuRadioItem value="system">
+              <Monitor className="size-4" /> System
+            </DropdownMenuRadioItem>
+          </DropdownMenuRadioGroup>
+        </DropdownMenuGroup>
+        <DropdownMenuSeparator />
+        <DropdownMenuItem onClick={() => void logout()}>
+          <LogOut className="size-4" /> Log out
+        </DropdownMenuItem>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+function AppSidebar({ groups, cur }: { groups: NavGroup[]; cur: string }) {
+  const { nav } = useApp();
+  const { setOpenMobile } = useSidebar();
+  return (
+    <Sidebar collapsible="icon" className="border-r">
+      <SidebarHeader className="px-3 pt-4 pb-2">
+        <BrandMark />
+      </SidebarHeader>
+      <SidebarContent>
+        {groups.map((g) => (
+          <SidebarGroup key={g.label}>
+            <SidebarGroupLabel className="text-[11px] font-bold tracking-[0.1em] uppercase">{g.label}</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {g.items.map((it) => (
+                  <SidebarMenuItem key={it.key}>
+                    <SidebarMenuButton
+                      isActive={it.key === cur}
+                      tooltip={it.label}
+                      className="h-9 text-[14px] font-semibold data-active:bg-sidebar-accent data-active:text-sidebar-accent-foreground"
+                      onClick={() => {
+                        nav(it.key);
+                        setOpenMobile(false);
+                      }}
+                    >
+                      <it.icon className="size-[18px]" />
+                      <span>{it.label}</span>
+                    </SidebarMenuButton>
+                    {it.badge ? (
+                      <SidebarMenuBadge className={it.badge.bad ? 'rounded-full bg-danger-soft px-1.5 text-danger' : 'rounded-full bg-muted px-1.5 text-muted-foreground'}>{it.badge.n}</SidebarMenuBadge>
+                    ) : null}
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        ))}
+      </SidebarContent>
+      <SidebarFooter className="border-t p-2">
+        <SidebarMenu>
+          <SidebarMenuItem>
+            <UserMenu />
+          </SidebarMenuItem>
+        </SidebarMenu>
+      </SidebarFooter>
+      <SidebarRail />
+    </Sidebar>
+  );
+}
+
+function Splash() {
+  return (
+    <div className="grid min-h-screen place-items-center p-6">
+      <div className="flex w-full max-w-sm flex-col items-center gap-4">
+        <Skeleton className="size-12 rounded-2xl" />
+        <Skeleton className="h-4 w-48" />
+        <Skeleton className="h-3 w-32" />
+      </div>
+    </div>
+  );
+}
+
+export function Shell() {
+  const { boot, bootError, role, session, viewAs, setViewAs, view, loaded, setView, nav } = useApp();
+  const groups = useNavGroups();
+  const items = groups.flatMap((g) => g.items);
+  const cur = items.map((x) => x.key).includes(view) ? view : items[0]?.key || '';
+  const curLabel = items.find((i) => i.key === cur)?.label || '';
+
+  if (boot === 'loading') return <Splash />;
+  if (boot === 'error')
+    return (
+      <div className="grid min-h-screen place-items-center p-6">
+        <div className="empty max-w-md">
+          <h2>The dashboard could not start</h2>
+          <p className="muted">{bootError}</p>
+          <Button onClick={() => location.reload()}>Try again</Button>
+        </div>
       </div>
     );
-  else if (!role || !session) main = <LoginView />;
-  else if (!loaded) main = <div className="loading">Loading production data…</div>;
-  else if (role === 'admin') {
+  if (!role || !session) return <LoginView />;
+
+  let main: React.ReactNode;
+  if (!loaded) {
+    main = (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-9 w-64" />
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((i) => (
+            <Skeleton key={i} className="h-28 rounded-xl" />
+          ))}
+        </div>
+        <Skeleton className="h-72 rounded-xl" />
+      </div>
+    );
+  } else if (role === 'admin') {
     switch (cur) {
       case 'import':
         main = <ImportPage />;
@@ -100,52 +285,44 @@ export function Shell() {
   else main = <TeamView team={role} admin={false} />;
 
   return (
-    <div id="app">
-      <aside className="side" id="side">
-        <div className="brand">
-          <div className="wm">
-            ENDPOINT <i>CLIENTS</i>
-          </div>
-          <div className="sub">Social Media Production Dashboard</div>
-        </div>
-        <nav className="nav" aria-label="Main">
-          {items.map(([k, l, c]) => (
-            <button key={k} aria-current={k === cur ? 'page' : undefined} onClick={() => nav(k)}>
-              <span>{l}</span>
-              {c ? <span className={`cnt ${c.bad ? 'bad' : ''} num`}>{c.n}</span> : null}
-            </button>
-          ))}
-        </nav>
-        {role && session ? (
-          <div className="who">
-            <div style={{ flex: 1 }}>
-              <b>{session.name || ROLES[baseRole!]}</b>
-              {ROLES[baseRole!] || ''}
-              {viewAs ? ' · previewing' : ''}
+    <SidebarProvider>
+      <AppSidebar groups={groups} cur={cur} />
+      <SidebarInset className="min-w-0 bg-background">
+        <header data-app-header className="sticky top-0 z-20 flex h-14 shrink-0 items-center gap-2 border-b bg-background/80 px-4 backdrop-blur-md">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-1 h-5" />
+          <Breadcrumb>
+            <BreadcrumbList>
+              <BreadcrumbItem className="hidden sm:block">
+                <span className="text-sm text-muted-foreground">Endpoint Clients</span>
+              </BreadcrumbItem>
+              <BreadcrumbSeparator className="hidden sm:block" />
+              <BreadcrumbItem>
+                <BreadcrumbPage className="text-sm font-semibold">{curLabel}</BreadcrumbPage>
+              </BreadcrumbItem>
+            </BreadcrumbList>
+          </Breadcrumb>
+        </header>
+        <main id="main" className="mx-auto w-full max-w-[1500px] min-w-0 flex-1 p-4 md:p-6 lg:p-8">
+          {viewAs && (
+            <div className="preview-bar">
+              <span>Previewing the {ROLES[viewAs]} view. Delete and admin controls are hidden here, exactly as the team sees it.</span>
+              <Button
+                size="sm"
+                variant="outline"
+                onClick={() => {
+                  setViewAs(null);
+                  setView('settings');
+                  nav('settings');
+                }}
+              >
+                Exit preview
+              </Button>
             </div>
-            <button className="btn sm" style={{ background: 'transparent', color: 'var(--nav-fg)', borderColor: '#3A3A50' }} onClick={() => void logout()}>
-              Log out
-            </button>
-          </div>
-        ) : null}
-      </aside>
-      <main className="main" id="main">
-        {viewAs && (
-          <div className="preview-bar">
-            <span>Previewing the {ROLES[viewAs]} view. Delete and admin controls are hidden here, exactly as the team sees it.</span>
-            <button
-              className="btn sm"
-              onClick={() => {
-                setViewAs(null);
-                setView('settings');
-              }}
-            >
-              Exit preview
-            </button>
-          </div>
-        )}
-        {main}
-      </main>
-    </div>
+          )}
+          {main}
+        </main>
+      </SidebarInset>
+    </SidebarProvider>
   );
 }

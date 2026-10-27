@@ -116,7 +116,7 @@ export function SettingsView() {
           <div className="stack" style={{ gap: 14 }}>
             {customRoles.length ? (
               customRoles.map((r) => (
-                <div key={r.key} style={{ borderTop: '1px solid var(--line)', paddingTop: 12 }} className="stack">
+                <div key={r.key} style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }} className="stack">
                   <div className="row" style={{ alignItems: 'end' }}>
                     <label className="field" style={{ minWidth: 190 }}>
                       <span>Role name</span>
@@ -143,7 +143,7 @@ export function SettingsView() {
                 No extra roles yet.
               </p>
             )}
-            <div className="row" style={{ alignItems: 'end', borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+            <div className="row" style={{ alignItems: 'end', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
               <label className="field">
                 <span>New role name</span>
                 <input className="inp" style={{ width: 240 }} id="new-role-name" maxLength={40} placeholder="e.g. Front-end Developer" value={newName} onChange={(e) => setNewName(e.target.value)} />
@@ -190,7 +190,7 @@ export function SettingsView() {
 
 function PinRow({ label, isSet, value, onChange, onSave, id }: { label: string; isSet: boolean; value: string; onChange: (v: string) => void; onSave: () => void; id: string }) {
   return (
-    <div className="row" style={{ alignItems: 'end', borderTop: '1px solid var(--line)', paddingTop: 12 }}>
+    <div className="row" style={{ alignItems: 'end', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
       <div style={{ minWidth: 190 }}>
         <b>{label}</b>
         <div className="muted small">{isSet ? 'PIN is set' : 'No PIN yet: this role cannot log in'}</div>

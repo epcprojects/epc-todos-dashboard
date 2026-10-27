@@ -1,11 +1,12 @@
 'use client';
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useState } from 'react';
 import { TEAMS, teamKeys, type HistoryEntry, type Task, type Team } from '@/lib/constants';
 import { fmtDate, fmtDT, parseDateText } from '@/lib/dates';
 import { sched } from '@/lib/metrics';
 import { canEditContent } from '@/lib/perms';
 import { displayTitle } from '@/lib/tasks';
 import { dupKey, deriveFields, isURL } from '@/lib/text';
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from '@/components/ui/sheet';
 import { useApp } from './store';
 import { Flag, PlatPills, Pill, StatusSelect, who } from './ui';
 
@@ -21,10 +22,8 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
   const t = taskById(id)!;
   const [edit, setEdit] = useState<string[] | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
-  const closeBtn = useRef<HTMLButtonElement>(null);
   const [team, setTeam] = useState<Team>(t.team);
 
-  useEffect(() => closeBtn.current?.focus(), []);
 
   // Reload the activity list whenever the task changes (our own edit, or someone else's arriving via polling).
   useEffect(() => {
@@ -83,24 +82,13 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
   };
 
   return (
-    <div
-      className="drawer-wrap"
-      onMouseDown={(e) => {
-        if (e.target === e.currentTarget) onClose();
-      }}
-    >
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Task details">
-        <div className="dh">
-          <div>
-            <div className="muted small" style={{ fontWeight: 700, textTransform: 'uppercase', letterSpacing: '.06em' }}>
-              Task Details · {TEAMS[t.team]}
-            </div>
-            <h2 style={{ marginTop: 4 }}>{displayTitle(t)}</h2>
-          </div>
-          <button className="btn" id="drawer-close" ref={closeBtn} onClick={onClose}>
-            Close
-          </button>
-        </div>
+    <Sheet open onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full gap-0 overflow-y-auto p-0 data-[side=right]:sm:max-w-[680px]">
+        <SheetHeader className="sticky top-0 z-10 border-b bg-popover/95 p-5 pr-14 backdrop-blur">
+          <div className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase">Task details · {TEAMS[t.team]}</div>
+          <SheetTitle className="text-xl leading-snug font-extrabold tracking-tight">{displayTitle(t)}</SheetTitle>
+        </SheetHeader>
+        <div className="flex flex-col gap-5 p-5">
         <div className="row">
           <PlatPills value={t.platform} />
           {t.type ? <span className="tag">{t.type}</span> : null}
@@ -373,7 +361,8 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
             ))}
           </ul>
         </section>
-      </aside>
-    </div>
+        </div>
+      </SheetContent>
+    </Sheet>
   );
 }

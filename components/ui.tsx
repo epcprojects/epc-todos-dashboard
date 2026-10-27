@@ -109,7 +109,7 @@ export function Ring({ p, label }: { p: number; label: string }) {
   const r = 46;
   const c = 2 * Math.PI * r;
   return (
-    <svg viewBox="0 0 120 120" className="ring" role="img" aria-label={`${p}% ${label}`}>
+    <svg viewBox="0 0 120 120" className="donut" role="img" aria-label={`${p}% ${label}`}>
       <circle cx="60" cy="60" r={r} className="ring-bg" />
       <circle cx="60" cy="60" r={r} className="ring-fg" strokeDasharray={`${((c * p) / 100).toFixed(1)} ${c.toFixed(1)}`} transform="rotate(-90 60 60)" style={p === 0 ? { display: 'none' } : undefined} />
       <text x="60" y="62" textAnchor="middle" className="ring-n">

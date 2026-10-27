@@ -71,7 +71,7 @@ export function TeamCompare() {
                 <td className="n">{r.dueP}%</td>
                 <td className="n">{r.ip}</td>
                 <td className="n">{r.blk}</td>
-                <td className="n" style={r.od ? { color: 'var(--bad-fg)' } : undefined}>
+                <td className="n" style={r.od ? { color: 'var(--danger)' } : undefined}>
                   {r.od}
                 </td>
                 <td className="n">{r.avg}</td>
