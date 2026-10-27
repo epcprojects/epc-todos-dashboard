@@ -5,7 +5,7 @@ import { fmtDT, todayISO } from '@/lib/dates';
 import { canTouch as canTouchPerm } from '@/lib/perms';
 import { statusPatch } from '@/lib/status';
 import { emptyFilters, ingest, type CTask, type TableFilters } from '@/lib/tasks';
-import { api, ApiFail, lsGet, lsSet, setUnauthorizedHandler, withRetry } from '@/lib/client/api';
+import { api, ApiFail, lsGet, lsSet, readLocation, setUnauthorizedHandler, withRetry, writeLocation } from '@/lib/client/api';
 import type { PeriodKind } from '@/lib/metrics';
 import { toast as sonner } from 'sonner';
 
@@ -303,7 +303,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   useEffect(() => {
-    setViewState(lsGet<string>('epc.view', 'dashboard'));
+    setViewState(readLocation()[0] || lsGet<string>('epc.view', 'dashboard'));
     (async () => {
       try {
         const i = await refreshInfo();
@@ -368,6 +368,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         const v = role === 'admin' ? 'dashboard' : 'team';
         setViewState(v);
         lsSet('epc.view', v);
+        writeLocation([v]);
         return null;
       } catch (e) {
         resetData();
@@ -386,6 +387,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         await bootstrap('admin', name);
         setViewState('dashboard');
         lsSet('epc.view', 'dashboard');
+        writeLocation(['dashboard']);
         return null;
       } catch (e) {
         return e instanceof Error ? e.message : 'Could not save the PIN.';
@@ -414,6 +416,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const setView = useCallback((v: string) => {
     setViewState(v);
     lsSet('epc.view', v);
+    if (readLocation()[0] !== v) writeLocation([v]);
   }, []);
   const nav = useCallback(
     (v: string) => {

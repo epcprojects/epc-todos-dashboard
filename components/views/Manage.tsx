@@ -2,7 +2,7 @@
 import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, LayoutGrid, List, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, sanitizeName, type ManageFile, type ManageSubfolder } from '@/lib/manage-config';
-import { api, lsGet, lsSet, sleep } from '@/lib/client/api';
+import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
 import { fmtDT } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
@@ -164,6 +164,16 @@ export function ManageView() {
 
   useEffect(() => setView(lsGet<'list' | 'grid'>('epc.manage.view', 'list')), []);
 
+  // restore the folder from the URL after a reload ("#/manage/Linkedin/Campaigns/Q4")
+  useEffect(() => {
+    const [v, f, ...rest] = readLocation();
+    const top = v === 'manage' && f ? FOLDERS.find((x) => x.key.toLowerCase() === f.toLowerCase()) : null;
+    if (top) {
+      setFolder(top.key);
+      setPath(rest.join('/'));
+    }
+  }, []);
+
   const load = useCallback(async () => {
     try {
       const r = await api<{ files: ManageFile[]; folders: ManageSubfolder[] }>('/api/manage/files');
@@ -277,6 +287,7 @@ export function ManageView() {
   const open = (f: string | null, p = '') => {
     setFolder(f);
     setPath(p);
+    writeLocation(f ? ['manage', f, ...p.split('/').filter(Boolean)] : ['manage']);
     setSel(new Set());
     setQ('');
     setShown(PAGE);

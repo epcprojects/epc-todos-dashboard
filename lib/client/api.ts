@@ -85,6 +85,22 @@ export function lsSet(k: string, v: unknown) {
   }
 }
 
+/** The page the user is on lives in the URL hash ("#/distribution", "#/manage/Linkedin/Q4") so a reload or a shared link returns to it. */
+export function readLocation(): string[] {
+  try {
+    return location.hash.replace(/^#\/?/, '').split('/').filter(Boolean).map(decodeURIComponent);
+  } catch {
+    return [];
+  }
+}
+export function writeLocation(segs: string[]) {
+  try {
+    history.replaceState(null, '', '#/' + segs.map(encodeURIComponent).join('/'));
+  } catch {
+    /* ignore */
+  }
+}
+
 export function downloadBlob(name: string, blob: Blob) {
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
