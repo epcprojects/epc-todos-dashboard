@@ -17,6 +17,10 @@ function friendlyServerError(e: unknown): string {
   if (/DATABASE_URL is not set/.test(msg)) return 'Server setup problem: the DATABASE_URL environment variable is not set.';
   if (/SESSION_SECRET/.test(msg)) return 'Server setup problem: SESSION_SECRET must be set to a random string of at least 32 characters.';
   if (code === '42P01' || /settings row missing/.test(msg)) return 'Database setup problem: the tables are missing. Run neon_schema.sql in the Neon SQL Editor.';
+  if (/S3_NOT_CONFIGURED/.test(msg)) return 'Storage setup problem: AWS_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_REGION must all be set.';
+  const nm = (e as { name?: string } | null)?.name;
+  if (nm === 'AccessDenied' || nm === 'Forbidden') return 'The storage user is not allowed to do that. Check its IAM permissions (list, read, write and delete on the bucket).';
+  if (nm === 'NoSuchBucket') return 'Storage setup problem: the bucket named in AWS_BUCKET does not exist.';
   if (/Error connecting to database/.test(msg)) return 'Could not connect to the database. Check DATABASE_URL (use the pooled connection string).';
   return 'Something went wrong on the server. Please try again.';
 }

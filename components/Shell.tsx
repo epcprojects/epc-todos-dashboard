@@ -11,6 +11,7 @@ import { Reports } from './views/Reports';
 import { ImportsView } from './views/Imports';
 import { SettingsView } from './views/Settings';
 import { ImportPage } from './views/ImportPage';
+import { ManageView } from './views/Manage';
 
 type NavItem = [string, string, { n: number; bad?: boolean } | null];
 
@@ -30,6 +31,7 @@ function useNavItems(): NavItem[] {
       ['calendar', 'Calendar / Schedule', null],
       ['reports', 'Reports', null],
       ['imports', 'Imports', { n: imports.length }],
+      ['manage', 'Manage', null],
       ['settings', 'Settings', null],
     ];
   }
@@ -38,6 +40,7 @@ function useNavItems(): NavItem[] {
   return [
     ['team', 'My Tasks', od ? { n: od, bad: true } : { n: mine.filter((t) => t.status !== 'completed').length }],
     ['calendar', 'Calendar', null],
+    ['manage', 'Manage', null],
   ];
 }
 
@@ -80,6 +83,9 @@ export function Shell() {
       case 'reports':
         main = <Reports />;
         break;
+      case 'manage':
+        main = <ManageView />;
+        break;
       case 'imports':
         main = <ImportsView />;
         break;
@@ -89,7 +95,8 @@ export function Shell() {
       default:
         main = cur.startsWith('team:') ? <TeamView team={cur.slice(5)} admin /> : <Dashboard />;
     }
-  } else if (cur === 'calendar') main = <CalendarView />;
+  } else if (cur === 'manage') main = <ManageView />;
+  else if (cur === 'calendar') main = <CalendarView />;
   else main = <TeamView team={role} admin={false} />;
 
   return (

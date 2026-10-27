@@ -52,6 +52,28 @@ The app never creates or migrates tables. You create them once yourself:
 
 To let the admin create extra roles (for example "Front-end Developer") with their own PINs, run [`migrations/001_custom_roles.sql`](migrations/001_custom_roles.sql) once in the Neon SQL Editor of the database the app uses. It adds a `custom_roles` table and removes the three CHECK constraints that only allowed Designer/Editor. Until it is run, everything else works and *Settings → Team roles* shows an explanatory error when you try to create a role.
 
+### Optional: file manager (S3)
+
+**Manage** is a file explorer for the bucket folders `Automation-Folder/{Linkedin,Facebook,Instagram,Tiktok,Youtube}`. Everyone can view, download and upload; only the admin can delete. Add four more environment variables (see `.env.example`): `AWS_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
+
+* **IAM permissions** needed: `s3:ListBucket` on the bucket, and `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` on `bucket/Automation-Folder/*`.
+* **Uploads go straight from the browser to S3** with a short-lived presigned POST, so Vercel's 4.5 MB body limit never applies. S3 itself enforces the 5 GiB per-file limit.
+* **One-time bucket CORS** (S3 console → bucket → Permissions → Cross-origin resource sharing). Add your site address(es):
+
+  ```json
+  [
+    {
+      "AllowedHeaders": ["*"],
+      "AllowedMethods": ["POST", "GET", "HEAD"],
+      "AllowedOrigins": ["https://epc-production-dashboard.vercel.app", "http://localhost:3000"],
+      "ExposeHeaders": ["ETag"],
+      "MaxAgeSeconds": 3000
+    }
+  ]
+  ```
+* **Settings** live in `lib/manage-config.ts`: the folder list, `MAX_FILE_BYTES` (5 GiB) and **`ALLOWED_EXTENSIONS`**. An empty list allows every file type; put extensions in it (for example `['jpg', 'png', 'mp4', 'pdf']`) to restrict uploads. Both the browser and the server enforce it.
+* A file whose name already exists is saved as `name (1).ext`. Files are never overwritten; folders cannot be created or deleted from the app.
+
 ## 4. Deploy to Vercel
 
 1. Push this folder to a Git repository (GitHub, GitLab or Bitbucket).
