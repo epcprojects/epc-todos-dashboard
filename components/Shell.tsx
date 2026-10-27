@@ -301,7 +301,7 @@ export function Shell() {
         <main id="main" className="mx-auto w-full max-w-[1500px] min-w-0 flex-1 p-4 md:p-6 lg:p-8">
           {viewAs && (
             <div className="preview-bar">
-              <span>Previewing the {ROLES[viewAs]} view. Delete and admin controls are hidden here, exactly as the team sees it.</span>
+              <span>Previewing the {ROLES[viewAs]} view. Admin controls are hidden here, exactly as the team sees it.</span>
               <Button
                 size="sm"
                 variant="outline"
