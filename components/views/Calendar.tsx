@@ -3,6 +3,7 @@ import { TEAM_SHORT, teamKeys } from '@/lib/constants';
 import { addDays, diffDays, fmtDate, fromUTC, toUTC, weekStart } from '@/lib/dates';
 import { isOverdue } from '@/lib/metrics';
 import { displayTitle, type CTask } from '@/lib/tasks';
+import { ChevronLeft, ChevronRight } from 'lucide-react';
 import { useApp } from '../store';
 import { Flag, PageHeader, PlatPills, Pill } from '../ui';
 
@@ -83,17 +84,17 @@ export function CalendarView() {
         title="Calendar / Schedule"
         sub={r === 'admin' ? 'Production status against posting dates. Each line shows completed / scheduled tasks.' : 'Your tasks by posting date.'}
         actions={
-          <>
-            <button className="btn" onClick={() => move(-1)}>
-              Previous month
+          <div className="inline-flex items-center rounded-lg border bg-card p-0.5 shadow-(--shadow-card)">
+            <button className="grid size-8 place-items-center rounded-md hover:bg-muted" aria-label="Previous month" onClick={() => move(-1)}>
+              <ChevronLeft className="size-4" />
             </button>
-            <button className="btn" onClick={() => move(0)}>
-              This month
+            <button className="h-8 rounded-md px-3 text-sm font-semibold hover:bg-muted" onClick={() => move(0)}>
+              Today
             </button>
-            <button className="btn" onClick={() => move(1)}>
-              Next month
+            <button className="grid size-8 place-items-center rounded-md hover:bg-muted" aria-label="Next month" onClick={() => move(1)}>
+              <ChevronRight className="size-4" />
             </button>
-          </>
+          </div>
         }
         eyebrow="Schedule"
       />

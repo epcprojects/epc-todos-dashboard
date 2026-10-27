@@ -1,5 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
+import { ChevronDown, Layers, Upload } from 'lucide-react';
 import { TEAMS, teamKeys, type Team } from '@/lib/constants';
 import { useApp } from '../store';
 import { PageHeader } from '../ui';
@@ -19,6 +20,7 @@ export function Distribution() {
     return out;
   }, [act, imports]);
   const [sel, setSel] = useState(0);
+  const [openReassign, setOpenReassign] = useState(false);
   const [team, setTeam] = useState<Team>('designer');
 
   const reassign = async () => {
@@ -44,15 +46,25 @@ export function Distribution() {
         sub="Assign, reassign and manage every imported task. Select rows for bulk actions."
         actions={
           <button className="btn primary" onClick={() => nav('import')}>
-            Upload Content Excel
+            <Upload className="size-4" /> Upload Content Excel
           </button>
         }
         eyebrow="Admin"
       />
       {sheets.length ? (
-        <section className="panel" style={{ marginBottom: 18 }}>
-          <h2>Reassign an entire sheet</h2>
-          <div className="row" style={{ alignItems: 'end' }}>
+        <section className="panel mb-4 !py-0">
+          <button type="button" aria-expanded={openReassign} onClick={() => setOpenReassign((o) => !o)} className="flex w-full items-center gap-3 py-3.5 text-left">
+            <span className="grid size-8 place-items-center rounded-lg bg-muted text-muted-foreground">
+              <Layers className="size-4" />
+            </span>
+            <span className="flex-1">
+              <span className="block text-[15px] font-semibold">Reassign an entire sheet</span>
+              <span className="block text-[13px] text-muted-foreground">Move every task from one sheet to a team in one step</span>
+            </span>
+            <ChevronDown className={`size-4 text-muted-foreground transition-transform ${openReassign ? 'rotate-180' : ''}`} />
+          </button>
+          {openReassign && <div className="border-t pt-4 pb-4">
+            <div className="row" style={{ alignItems: 'end' }}>
             <label className="field" style={{ flex: 2, minWidth: 260 }}>
               <span>Sheet</span>
               <select className="inp" id="rs-sheet" value={Math.min(sel, sheets.length - 1)} onChange={(e) => setSel(+e.target.value)}>
@@ -77,6 +89,8 @@ export function Distribution() {
               Reassign sheet
             </button>
           </div>
+        
+          </div>}
         </section>
       ) : null}
       <TaskTable tkey="all" admin />

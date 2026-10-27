@@ -6,7 +6,7 @@ import { prioCmp } from '@/lib/tasks';
 import { plural } from '@/lib/text';
 import { useApp } from '../store';
 import { QItem } from '../parts';
-import { CovScale, Kpi, PageHeader } from '../ui';
+import { CovScale, PageHeader, StatStrip } from '../ui';
 import { TaskTable } from '../TaskTable';
 
 export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
@@ -56,19 +56,20 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
         {empty}
       </>
     );
-  const k = (l: string, v: number, s: string, tone: string, q: string) => <Kpi label={l} value={v} sub={s} tone={tone} onClick={() => teamQuick(team, q)} />;
   return (
     <>
       {head}
       <div className="stack">
-        <div className="kpis cols-6">
-          {k("Today's tasks", scheduledToday.length, `${scheduledToday.filter((t) => t.status === 'completed').length} done`, '', 'today')}
-          {k('Completed today', doneToday, 'Marked completed today', 'good', 'donetoday')}
-          {k('In progress', ip, '', '', 'in_progress')}
-          {k('Not started', ns, '', '', 'not_started')}
-          {k('Overdue', od, 'Past posting date', od ? 'bad' : '', 'overdue')}
-          {k('Upcoming', upc, 'Unfinished, next 7 days', '', 'next7')}
-        </div>
+        <StatStrip
+          items={[
+            { label: "Today's tasks", value: scheduledToday.length, sub: `${scheduledToday.filter((t) => t.status === 'completed').length} done`, onClick: () => teamQuick(team, 'today') },
+            { label: 'Completed today', value: doneToday, sub: 'Marked completed', tone: 'good', onClick: () => teamQuick(team, 'donetoday') },
+            { label: 'In progress', value: ip, onClick: () => teamQuick(team, 'in_progress') },
+            { label: 'Not started', value: ns, onClick: () => teamQuick(team, 'not_started') },
+            { label: 'Overdue', value: od, sub: 'Past posting date', tone: od ? 'bad' : '', onClick: () => teamQuick(team, 'overdue') },
+            { label: 'Upcoming', value: upc, sub: 'Unfinished, next 7 days', onClick: () => teamQuick(team, 'next7') },
+          ]}
+        />
         <div className="panel row" style={{ justifyContent: 'space-between' }}>
           <div>
             <b style={{ fontSize: 18 }}>Production coverage: {cov.none ? 'no upcoming content' : plural(cov.days, 'day') + ' ahead'}</b>

@@ -60,7 +60,7 @@
 }
 
 :root {
-  --radius: 0.75rem;
+  --radius: 0.5rem;
   --background: #f6f6fa;
   --foreground: #0b0b18;
   --card: #ffffff;
@@ -189,9 +189,9 @@
 
 /* page header */
 .ph { display: flex; align-items: flex-end; justify-content: space-between; gap: 16px; flex-wrap: wrap; margin-bottom: 24px; }
-.ph .eyebrow { font-size: 12px; line-height: 1; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin-bottom: 8px; display: inline-flex; align-items: center; gap: 6px; }
+.ph .eyebrow { display: none; font-size: 12px; line-height: 1; font-weight: 800; letter-spacing: .12em; text-transform: uppercase; color: var(--primary); margin-bottom: 8px; align-items: center; gap: 6px; }
 .ph .eyebrow::before { content: ""; width: 14px; height: 3px; border-radius: 3px; background: var(--primary); }
-.ph h1 { font-size: 28px; }
+.ph h1 { font-size: 24px; font-weight: 700; }
 .ph p { margin: 6px 0 0; color: var(--muted-foreground); }
 
 /* cards */
@@ -287,6 +287,11 @@ table.t tr.sel td { background: var(--accent); }
 table.t td.chk, table.t th.chk { width: 44px; position: sticky; left: 0; background: inherit; z-index: 1; }
 table.t th.chk { z-index: 3; background: color-mix(in srgb, var(--muted), var(--card) 35%); }
 table.t td.chk { background: var(--card); }
+/* status + details stay visible while the Excel columns scroll */
+table.t th.stk-act, table.t td.stk-act { position: sticky; right: 0; width: 124px; min-width: 124px; background: var(--card); z-index: 1; }
+table.t th.stk-st, table.t td.stk-st { position: sticky; right: 124px; min-width: 150px; background: var(--card); z-index: 1; box-shadow: -10px 0 10px -10px rgb(0 0 0 / .18); }
+table.t th.stk-act, table.t th.stk-st { z-index: 3; background: color-mix(in srgb, var(--muted), var(--card) 35%); }
+table.t tr.sel td.stk-act, table.t tr.sel td.stk-st, table.t tr[data-row]:hover td.stk-act, table.t tr[data-row]:hover td.stk-st { background: var(--accent); }
 .clip { display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; max-width: 22rem; min-width: 7rem; white-space: pre-wrap; word-break: break-word; }
 .clip.title { min-width: 14rem; font-weight: 700; }
 .pager { display: flex; gap: 10px; align-items: center; justify-content: space-between; flex-wrap: wrap; margin-top: 12px; }
@@ -302,7 +307,7 @@ table.cmp td.n { font-variant-numeric: tabular-nums; font-weight: 700; }
 .colmenu label { display: flex; gap: 8px; align-items: center; padding: 6px 8px; border-radius: 6px; font-size: 14px; cursor: pointer; }
 .colmenu label:hover { background: var(--muted); }
 
-.bulk { position: sticky; top: 8px; z-index: 5; background: var(--foreground); color: var(--background); border-radius: var(--radius-lg); padding: 10px 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; margin-bottom: 12px; box-shadow: 0 8px 28px rgb(0 0 0 / .25); }
+.bulk { position: sticky; bottom: 16px; top: auto; z-index: 15; margin: 14px 0 0; background: var(--foreground); color: var(--background); border-radius: var(--radius-lg); padding: 10px 14px; display: flex; gap: 10px; flex-wrap: wrap; align-items: center; box-shadow: 0 10px 34px rgb(0 0 0 / .3); }
 .bulk select { background: var(--background); color: var(--foreground); border-radius: 8px; border: 0; padding: 4px 8px; height: 30px; font-size: 14px; }
 .bulk .btn { height: 30px; font-size: 14px; background: color-mix(in srgb, var(--background), transparent 88%); color: var(--background); border-color: transparent; box-shadow: none; }
 .bulk .btn:hover { background: color-mix(in srgb, var(--background), transparent 78%); }

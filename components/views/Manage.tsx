@@ -1,4 +1,5 @@
 'use client';
+import { Download, LayoutGrid, List, RefreshCw, Trash2, Upload } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, type ManageFile } from '@/lib/manage-config';
 import { api, lsGet, lsSet, sleep } from '@/lib/client/api';
@@ -273,7 +274,7 @@ export function ManageView() {
         eyebrow="Storage"
         actions={
           <button className="btn" onClick={() => void load()}>
-            Refresh
+            <RefreshCw className="size-4" /> Refresh
           </button>
         }
       />
@@ -327,14 +328,14 @@ export function ManageView() {
               </button>
               <div className="row" role="group" aria-label="View">
                 <button className={`btn ${view === 'list' ? 'primary' : ''}`} aria-pressed={view === 'list'} onClick={() => changeView('list')}>
-                  List
+                  <List className="size-4" /> List
                 </button>
                 <button className={`btn ${view === 'grid' ? 'primary' : ''}`} aria-pressed={view === 'grid'} onClick={() => changeView('grid')}>
-                  Grid
+                  <LayoutGrid className="size-4" /> Grid
                 </button>
               </div>
               <label className="btn primary" htmlFor="mg-file" style={{ cursor: 'pointer' }}>
-                Upload files
+                <Upload className="size-4" /> Upload files
               </label>
               <input id="mg-file" ref={fileIn} type="file" multiple hidden onChange={(e) => { void startUpload([...(e.target.files || [])]); e.target.value = ''; }} />
             </div>
@@ -343,11 +344,11 @@ export function ManageView() {
               <div className="bulk" role="region" aria-label="Selected files">
                 <b>{sel.size} selected</b>
                 <button className="btn sm" onClick={() => void download([...sel])}>
-                  Download
+                  <Download className="size-3.5" /> Download
                 </button>
                 {isAdmin && (
                   <button className="btn sm danger" disabled={busy} onClick={() => void del()}>
-                    Delete
+                    <Trash2 className="size-3.5" /> Delete
                   </button>
                 )}
                 <button className="btn sm ghost" style={{ color: 'inherit' }} onClick={() => setSel(new Set())}>

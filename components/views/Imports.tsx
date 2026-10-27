@@ -4,6 +4,7 @@ import { fmtDT } from '@/lib/dates';
 import { headersFromValues, genericHeads } from '@/lib/text';
 import { api } from '@/lib/client/api';
 import { useState } from 'react';
+import { Archive, ArchiveRestore, FilePlus2, Trash2, Upload } from 'lucide-react';
 import type { ImportRec, SheetMeta } from '@/lib/constants';
 import { AppendDialog } from '../AppendDialog';
 import { useApp } from '../store';
@@ -123,7 +124,7 @@ export function ImportsView() {
         sub="Every Excel workbook imported into the dashboard."
         actions={
           <button className="btn primary" onClick={() => nav('import')}>
-            Upload Content Excel
+            <Upload className="size-4" /> Upload Content Excel
           </button>
         }
         eyebrow="History"
@@ -156,13 +157,13 @@ export function ImportsView() {
                   </div>
                   <div className="row">
                     <button className="btn sm" onClick={() => void archive(imp.id)}>
-                      Archive its tasks
+                      <Archive className="size-3.5" /> Archive tasks
                     </button>
                     <button className="btn sm" onClick={() => void restore(imp.id)}>
-                      Restore archived
+                      <ArchiveRestore className="size-3.5" /> Restore
                     </button>
                     <button className="btn sm danger" onClick={() => void remove(imp.id)}>
-                      Delete import
+                      <Trash2 className="size-3.5" /> Delete import
                     </button>
                   </div>
                 </div>
@@ -216,10 +217,10 @@ export function ImportsView() {
                         <td>
                           <div className="row" style={{ flexWrap: 'nowrap' }}>
                             <button className="btn sm" onClick={() => setAppendFor({ imp, sheet: s })}>
-                              Append new rows
+                              <FilePlus2 className="size-3.5" /> Append rows
                             </button>
                             <button className="btn sm danger" onClick={() => void deleteSheet(imp, s)}>
-                              Delete untouched
+                              <Trash2 className="size-3.5" /> Delete untouched
                             </button>
                           </div>
                         </td>

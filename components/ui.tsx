@@ -152,3 +152,41 @@ export const who = (h: Pick<HistoryEntry, 'name' | 'role'>) => {
   const r = ROLES[h.role] || 'Someone';
   return h.name ? `${h.name} (${r})` : r;
 };
+
+export interface StatItem {
+  label: string;
+  value: ReactNode;
+  sub?: ReactNode;
+  tone?: 'good' | 'bad' | '';
+  onClick?: () => void;
+}
+
+/** One connected card of numbers (instead of a grid of separate boxes). */
+export function StatStrip({ items }: { items: StatItem[] }) {
+  return (
+    <div
+      className="grid overflow-hidden rounded-xl border bg-card shadow-(--shadow-card)"
+      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}
+    >
+      {items.map((it, i) => {
+        const inner = (
+          <>
+            <span className="text-[13px] font-medium text-muted-foreground">{it.label}</span>
+            <span className={`mt-1 text-[26px] leading-none font-semibold tracking-tight tabular-nums ${it.tone === 'bad' ? 'text-danger' : it.tone === 'good' ? 'text-success' : ''}`}>{it.value}</span>
+            {it.sub ? <span className="mt-1.5 text-[13px] leading-snug text-muted-foreground">{it.sub}</span> : null}
+          </>
+        );
+        const cls = `flex flex-col items-start p-4 text-left ${i ? 'border-l' : ''} border-t first:border-t-0 sm:border-t-0`;
+        return it.onClick ? (
+          <button key={it.label} type="button" onClick={it.onClick} className={`${cls} transition-colors hover:bg-muted/50`}>
+            {inner}
+          </button>
+        ) : (
+          <div key={it.label} className={cls}>
+            {inner}
+          </div>
+        );
+      })}
+    </div>
+  );
+}

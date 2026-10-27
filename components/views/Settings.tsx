@@ -1,10 +1,52 @@
 'use client';
 import { useState } from 'react';
+import { Eye, KeyRound, Pencil, Trash2, UserPlus } from 'lucide-react';
 import { ROLES, type BaseRole, type Role } from '@/lib/constants';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Card, CardContent } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Switch } from '@/components/ui/switch';
 import { useApp } from '../store';
-import { PageHeader } from '../ui';
 
 const BASE: BaseRole[] = ['admin', 'designer', 'editor'];
+
+/** Settings layout: the section title and explanation on the left, the controls on the right. */
+function Section({ title, desc, children }: { title: string; desc: React.ReactNode; children: React.ReactNode }) {
+  return (
+    <section className="grid gap-4 border-b py-7 first:pt-0 last:border-b-0 lg:grid-cols-[280px_1fr] lg:gap-10">
+      <div>
+        <h2 className="text-[15px] font-semibold">{title}</h2>
+        <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{desc}</p>
+      </div>
+      <div className="min-w-0">{children}</div>
+    </section>
+  );
+}
+
+function PinRow({ label, isSet, value, onChange, onSave, id, extra }: { label: string; isSet: boolean; value: string; onChange: (v: string) => void; onSave: () => void; id: string; extra?: React.ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
+      <div className="min-w-44 flex-1">
+        <div className="flex items-center gap-2 text-sm font-medium">
+          {label}
+          <Badge variant={isSet ? 'secondary' : 'outline'} className={isSet ? 'bg-success-soft text-success' : 'text-muted-foreground'}>
+            {isSet ? 'PIN set' : 'No PIN'}
+          </Badge>
+        </div>
+      </div>
+      <Label htmlFor={id} className="sr-only">
+        New PIN for {label}
+      </Label>
+      <Input id={id} type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" placeholder="New PIN (4–8 digits)" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-44 text-sm" />
+      <Button variant={isSet ? 'outline' : 'default'} size="lg" onClick={onSave}>
+        <KeyRound /> {isSet ? 'Change PIN' : 'Set PIN'}
+      </Button>
+      {extra}
+    </div>
+  );
+}
 
 export function SettingsView() {
   const { settings, saveSettings, savePin, confirmBox, toast, setViewAs, nav, customRoles, createRole, renameRole, deleteRole } = useApp();
@@ -65,143 +107,137 @@ export function SettingsView() {
 
   return (
     <>
-      <PageHeader title="Settings" sub="Team access, production buffer target and editing permissions." eyebrow="Admin" />
-      <div className="stack">
-        <section className="panel">
-          <h2>Target production buffer</h2>
-          <p className="muted">How many days ahead of the posting calendar finished content should be. Health and alerts compare actual coverage against this.</p>
-          <div className="row" role="group" aria-label="Target buffer">
-            {[3, 5, 7, 10, 14].map((n) => (
-              <button key={n} className={`btn ${tgt === n ? 'primary' : ''}`} aria-pressed={tgt === n} onClick={() => void saveSettings({ targetBuffer: n })}>
-                {n} days
-              </button>
-            ))}
-            <label className="row" style={{ gap: 6 }}>
-              Custom{' '}
-              <input
-                className="inp"
-                style={{ width: 90 }}
-                type="number"
-                min={1}
-                max={60}
-                id="tgt-custom"
-                value={custom ?? tgt}
-                onChange={(e) => setCustom(e.target.value)}
-                onBlur={commitCustom}
-                onKeyDown={(e) => e.key === 'Enter' && commitCustom()}
-              />{' '}
-              days
-            </label>
-          </div>
-        </section>
-        <section className="panel">
-          <h2>Access PINs</h2>
-          <p className="muted">
-            Everyone opens the same dashboard link and logs in by choosing a role and entering its PIN. Each browser stays logged in until that person logs out. Changing a PIN logs out everyone using that role.
-          </p>
-          <div className="stack" style={{ gap: 14 }}>
+      <div className="mb-6">
+        <h1 className="text-2xl font-bold tracking-tight">Settings</h1>
+        <p className="mt-1 text-sm text-muted-foreground">Production targets, who can log in, and what each team may change.</p>
+      </div>
+
+      <div className="max-w-5xl">
+        <Section title="Production buffer" desc="How many days ahead of the posting calendar finished content should be. Health, alerts and the dashboard compare actual coverage against this target.">
+          <Card>
+            <CardContent className="flex flex-wrap items-center gap-2" role="group" aria-label="Target buffer">
+              {[3, 5, 7, 10, 14].map((n) => (
+                <Button key={n} variant={tgt === n ? 'default' : 'outline'} size="lg" aria-pressed={tgt === n} onClick={() => void saveSettings({ targetBuffer: n })}>
+                  {n} days
+                </Button>
+              ))}
+              <div className="ml-1 flex items-center gap-2 text-sm text-muted-foreground">
+                <Label htmlFor="tgt-custom">Custom</Label>
+                <Input
+                  id="tgt-custom"
+                  type="number"
+                  min={1}
+                  max={60}
+                  value={custom ?? tgt}
+                  onChange={(e) => setCustom(e.target.value)}
+                  onBlur={commitCustom}
+                  onKeyDown={(e) => e.key === 'Enter' && commitCustom()}
+                  className="h-9 w-20 text-sm"
+                />
+                days
+              </div>
+            </CardContent>
+          </Card>
+        </Section>
+
+        <Section title="Access PINs" desc="Everyone opens the same link and logs in by choosing a role and entering its PIN. Changing a PIN logs out everyone using that role. This is simple access separation for an internal tool, not strong security.">
+          <Card className="gap-0 divide-y py-0">
             {BASE.map((r) => (
-              <PinRow key={r} label={ROLES[r]} isSet={settings.pins[r]} value={pins[r] || ''} onChange={(v) => setPins((p) => ({ ...p, [r]: v }))} onSave={() => void save(r)} id={`pin-${r}`} />
+              <PinRow key={r} id={`pin-${r}`} label={ROLES[r]} isSet={settings.pins[r]} value={pins[r] || ''} onChange={(v) => setPins((p) => ({ ...p, [r]: v }))} onSave={() => void save(r)} />
             ))}
-          </div>
-          <p className="muted small" style={{ margin: '12px 0 0' }}>
-            This is simple access separation for an internal tool, not strong security. Share PINs only with the right person.
-          </p>
-        </section>
-        <section className="panel">
-          <h2>Team roles</h2>
-          <p className="muted">
-            Create extra roles, for example a Front-end Developer, each with its own PIN. A role works like Graphic Designer or Video Editor: assign sheets or tasks to it in Task Distribution and its members see only those tasks.
-          </p>
-          <div className="stack" style={{ gap: 14 }}>
+          </Card>
+        </Section>
+
+        <Section title="Team roles" desc="Add roles such as a Front-end Developer, each with its own PIN. A role works like Graphic Designer or Video Editor: assign sheets or tasks to it and its members see only those tasks.">
+          <Card className="gap-0 divide-y py-0">
             {customRoles.length ? (
               customRoles.map((r) => (
-                <div key={r.key} style={{ borderTop: '1px solid var(--border)', paddingTop: 12 }} className="stack">
-                  <div className="row" style={{ alignItems: 'end' }}>
-                    <label className="field" style={{ minWidth: 190 }}>
-                      <span>Role name</span>
-                      <input className="inp" style={{ width: 240 }} id={`rname-${r.key}`} maxLength={40} value={renaming[r.key] ?? r.name} onChange={(e) => setRenaming((x) => ({ ...x, [r.key]: e.target.value }))} />
-                    </label>
-                    <button
-                      className="btn"
+                <div key={r.key}>
+                  <PinRow
+                    id={`pin-${r.key}`}
+                    label={r.name}
+                    isSet={r.hasPin}
+                    value={pins[r.key] || ''}
+                    onChange={(v) => setPins((p) => ({ ...p, [r.key]: v }))}
+                    onSave={() => void save(r.key)}
+                    extra={
+                      <Button variant="destructive" size="lg" onClick={() => void remove(r.key)}>
+                        <Trash2 /> Delete
+                      </Button>
+                    }
+                  />
+                  <div className="flex flex-wrap items-center gap-3 border-t border-dashed px-4 py-3">
+                    <Label htmlFor={`rname-${r.key}`} className="text-[13px] text-muted-foreground">
+                      Rename
+                    </Label>
+                    <Input id={`rname-${r.key}`} maxLength={40} value={renaming[r.key] ?? r.name} onChange={(e) => setRenaming((x) => ({ ...x, [r.key]: e.target.value }))} className="h-9 w-56 text-sm" />
+                    <Button
+                      variant="outline"
+                      size="lg"
                       disabled={(renaming[r.key] ?? r.name).trim() === r.name || (renaming[r.key] ?? '').trim().length < 2}
                       onClick={async () => {
                         if (await renameRole(r.key, (renaming[r.key] ?? r.name).trim())) setRenaming((x) => ({ ...x, [r.key]: '' }));
                       }}
                     >
-                      Rename
-                    </button>
-                    <button className="btn danger" onClick={() => void remove(r.key)}>
-                      Delete role
-                    </button>
+                      <Pencil /> Save name
+                    </Button>
                   </div>
-                  <PinRow label={r.name} isSet={r.hasPin} value={pins[r.key] || ''} onChange={(v) => setPins((p) => ({ ...p, [r.key]: v }))} onSave={() => void save(r.key)} id={`pin-${r.key}`} />
                 </div>
               ))
             ) : (
-              <p className="muted" style={{ margin: 0 }}>
-                No extra roles yet.
-              </p>
+              <p className="px-4 py-4 text-sm text-muted-foreground">No extra roles yet.</p>
             )}
-            <div className="row" style={{ alignItems: 'end', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-              <label className="field">
-                <span>New role name</span>
-                <input className="inp" style={{ width: 240 }} id="new-role-name" maxLength={40} placeholder="e.g. Front-end Developer" value={newName} onChange={(e) => setNewName(e.target.value)} />
-              </label>
-              <label className="field">
-                <span>PIN (4 to 8 digits)</span>
-                <input className="inp" style={{ width: 170 }} id="new-role-pin" type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" value={newPin} onChange={(e) => setNewPin(e.target.value)} />
-              </label>
-              <button className="btn primary" onClick={() => void add()}>
-                Create role
-              </button>
+            <div className="flex flex-wrap items-end gap-3 bg-muted/40 px-4 py-4">
+              <div className="grid gap-1.5">
+                <Label htmlFor="new-role-name" className="text-[13px] text-muted-foreground">
+                  New role name
+                </Label>
+                <Input id="new-role-name" maxLength={40} placeholder="e.g. Front-end Developer" value={newName} onChange={(e) => setNewName(e.target.value)} className="h-9 w-60 text-sm" />
+              </div>
+              <div className="grid gap-1.5">
+                <Label htmlFor="new-role-pin" className="text-[13px] text-muted-foreground">
+                  PIN (4–8 digits)
+                </Label>
+                <Input id="new-role-pin" type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" value={newPin} onChange={(e) => setNewPin(e.target.value)} className="h-9 w-40 text-sm" />
+              </div>
+              <Button size="lg" onClick={() => void add()}>
+                <UserPlus /> Create role
+              </Button>
             </div>
-          </div>
-        </section>
-        <section className="panel">
-          <h2>Source content editing</h2>
-          <label className="row" style={{ gap: 10, cursor: 'pointer' }}>
-            <input type="checkbox" id="allow-edit" style={{ width: 22, height: 22 }} checked={settings.allowTeamEdit} onChange={(e) => void saveSettings({ allowTeamEdit: e.target.checked })} />{' '}
-            <span>Allow every team role to edit imported content (copy, direction, captions)</span>
-          </label>
-          <p className="muted small">Off by default. Team members can always change status and add production notes. Only the admin can delete.</p>
-        </section>
-        <section className="panel">
-          <h2>Preview team views</h2>
-          <p className="muted">See exactly what each team member sees, with admin and delete controls hidden.</p>
-          <div className="row">
-            <button className="btn" onClick={() => preview('designer')}>
-              Preview as Graphic Designer
-            </button>
-            <button className="btn" onClick={() => preview('editor')}>
-              Preview as Video Editor
-            </button>
-            {customRoles.map((r) => (
-              <button className="btn" key={r.key} onClick={() => preview(r.key)}>
-                Preview as {r.name}
-              </button>
-            ))}
-          </div>
-        </section>
+          </Card>
+        </Section>
+
+        <Section title="Editing imported content" desc="Team members can always change status and add production notes. Only the admin can delete.">
+          <Card>
+            <CardContent className="flex items-center justify-between gap-6">
+              <Label htmlFor="allow-edit" className="cursor-pointer text-sm leading-snug font-medium">
+                Let every team role edit imported content
+                <span className="mt-0.5 block text-[13px] font-normal text-muted-foreground">Copy, direction and captions from the Excel file.</span>
+              </Label>
+              <Switch id="allow-edit" checked={settings.allowTeamEdit} onCheckedChange={(v) => void saveSettings({ allowTeamEdit: !!v })} />
+            </CardContent>
+          </Card>
+        </Section>
+
+        <Section title="Preview team views" desc="See exactly what each team member sees, with admin and delete controls hidden.">
+          <Card>
+            <CardContent className="flex flex-wrap gap-2">
+              <Button variant="outline" size="lg" onClick={() => preview('designer')}>
+                <Eye /> Graphic Designer
+              </Button>
+              <Button variant="outline" size="lg" onClick={() => preview('editor')}>
+                <Eye /> Video Editor
+              </Button>
+              {customRoles.map((r) => (
+                <Button variant="outline" size="lg" key={r.key} onClick={() => preview(r.key)}>
+                  <Eye /> {r.name}
+                </Button>
+              ))}
+            </CardContent>
+          </Card>
+        </Section>
       </div>
     </>
   );
 }
 
-function PinRow({ label, isSet, value, onChange, onSave, id }: { label: string; isSet: boolean; value: string; onChange: (v: string) => void; onSave: () => void; id: string }) {
-  return (
-    <div className="row" style={{ alignItems: 'end', borderTop: '1px solid var(--border)', paddingTop: 12 }}>
-      <div style={{ minWidth: 190 }}>
-        <b>{label}</b>
-        <div className="muted small">{isSet ? 'PIN is set' : 'No PIN yet: this role cannot log in'}</div>
-      </div>
-      <label className="field">
-        <span>New PIN (4 to 8 digits)</span>
-        <input className="inp" style={{ width: 170 }} id={id} type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" value={value} onChange={(e) => onChange(e.target.value)} />
-      </label>
-      <button className={`btn ${isSet ? '' : 'primary'}`} onClick={onSave}>
-        {isSet ? 'Change PIN' : 'Set PIN'}
-      </button>
-    </div>
-  );
-}

@@ -5,9 +5,10 @@ import { health, periodRange, pm, type Coverage, type PeriodKind } from '@/lib/m
 import { prioCmp } from '@/lib/tasks';
 import { pctOf, plural } from '@/lib/text';
 import { exportCsvRows, exportTasksFile } from '@/lib/client/export';
+import { ChevronLeft, ChevronRight, Download, FileSpreadsheet, Printer } from 'lucide-react';
 import { useApp } from '../store';
 import { BarChart, QItem, TeamCompare } from '../parts';
-import { CovScale, EmptyImport, Kpi, PageHeader, PlatPills, Pill, ProgRow } from '../ui';
+import { CovScale, EmptyImport, PageHeader, PlatPills, Pill, ProgRow, StatStrip } from '../ui';
 
 const covTxt = (c: Coverage) => (c.none ? 'No upcoming content' : plural(c.days, 'Day') + ' Ahead');
 
@@ -139,21 +140,21 @@ export function Reports() {
         actions={
           <>
             <button className="btn" onClick={exportReport}>
-              Export report (CSV)
+              <FileSpreadsheet className="size-4" /> CSV report
             </button>
             <button className="btn" onClick={() => window.print()}>
-              Export report (PDF)
+              <Printer className="size-4" /> PDF report
             </button>
             <button className="btn" onClick={exportPeriod}>
-              Export period tasks (Excel)
+              <Download className="size-4" /> Period tasks (Excel)
             </button>
           </>
         }
       />
       <div className="row no-print" style={{ justifyContent: 'space-between', marginBottom: 16 }}>
-        <div className="row" role="group" aria-label="Report period">
+        <div className="tabs !mb-0" role="group" aria-label="Report period">
           {per.map(([k, l]) => (
-            <button key={k} className={`btn ${R.kind === k ? 'primary' : ''}`} aria-pressed={R.kind === k} onClick={() => setRep({ kind: k, off: 0 })}>
+            <button key={k} aria-selected={R.kind === k} aria-pressed={R.kind === k} onClick={() => setRep({ kind: k, off: 0 })}>
               {l}
             </button>
           ))}
@@ -161,7 +162,7 @@ export function Reports() {
         {R.kind !== 'all' && (
           <div className="row">
             <button className="btn" onClick={() => setRep({ ...R, off: R.off - 1 })}>
-              Previous {unit}
+              <ChevronLeft className="size-4" /> Previous {unit}
             </button>
             {R.off ? (
               <button className="btn" onClick={() => setRep({ ...R, off: 0 })}>
@@ -169,76 +170,53 @@ export function Reports() {
               </button>
             ) : null}
             <button className="btn" onClick={() => setRep({ ...R, off: R.off + 1 })}>
-              Next {unit}
+              Next {unit} <ChevronRight className="size-4" />
             </button>
           </div>
         )}
       </div>
       <div className="stack">
         <section className="panel">
-          <h2>Production Report</h2>
-          <dl className="kv" style={{ marginTop: 6 }}>
-            <dt>Today</dt>
-            <dd>{fmtDate(today, { weekday: 'long', month: 'long' })}</dd>
-            <dt>Period</dt>
-            <dd>{P.label}</dd>
-            <dt>Tasks scheduled</dt>
-            <dd className="num">
-              <b>{M.sch}</b>
-            </dd>
-            <dt>Completed</dt>
-            <dd className="num">
-              <b>{M.done}</b> ({M.pct}%)
-            </dd>
-            <dt>In progress</dt>
-            <dd className="num">{M.ip}</dd>
-            <dt>Not started</dt>
-            <dd className="num">{M.ns}</dd>
-            {M.blk ? (
-              <>
-                <dt>Blocked</dt>
-                <dd className="num">{M.blk}</dd>
-              </>
-            ) : null}
-            <dt>Overdue</dt>
-            <dd className="num" style={M.od ? { color: 'var(--danger)', fontWeight: 700 } : undefined}>
-              {M.od}
-            </dd>
-            <dt>Designer completion</dt>
-            <dd className="num">
-              {D.pct}% ({D.done} / {D.sch})
-            </dd>
-            <dt>Editor completion</dt>
-            <dd className="num">
-              {E.pct}% ({E.done} / {E.sch})
-            </dd>
-            <dt>Designer coverage</dt>
-            <dd>{covTxt(H.c.d)}</dd>
-            <dt>Editor coverage</dt>
-            <dd>{covTxt(H.c.e)}</dd>
-            <dt>Overall content coverage</dt>
-            <dd>
-              <b>{covTxt(H.c.o)}</b>
-              {H.c.o.through ? ` · fully prepared through ${fmtDate(H.c.o.through, { weekday: 'short' })}` : ''}
-            </dd>
-            <dt>Target</dt>
-            <dd>{H.tgt} Days Ahead</dd>
-            <dt>Production health</dt>
-            <dd>
-              <span className={`badge pill h-${H.k}`} style={{ fontSize: 15 }}>
-                {H.label}
-              </span>
-            </dd>
+          <div className="mb-3 flex flex-wrap items-center justify-between gap-2">
+            <h2>Production report</h2>
+            <span className={`pill h-${H.k}`}>{H.label}</span>
+          </div>
+          <dl className="grid gap-x-10 sm:grid-cols-2 xl:grid-cols-3">
+            {(
+              [
+                ['Today', fmtDate(today, { weekday: 'long', month: 'long' })],
+                ['Period', P.label],
+                ['Tasks scheduled', <b key="a">{M.sch}</b>],
+                ['Completed', <span key="b"><b>{M.done}</b> ({M.pct}%)</span>],
+                ['In progress', M.ip],
+                ['Not started', M.ns],
+                ...(M.blk ? [['Blocked', M.blk] as [string, React.ReactNode]] : []),
+                ['Overdue', <span key="c" className={M.od ? 'font-semibold text-danger' : ''}>{M.od}</span>],
+                ['Designer completion', `${D.pct}% (${D.done} / ${D.sch})`],
+                ['Editor completion', `${E.pct}% (${E.done} / ${E.sch})`],
+                ['Designer coverage', covTxt(H.c.d)],
+                ['Editor coverage', covTxt(H.c.e)],
+                ['Overall coverage', <span key="d"><b>{covTxt(H.c.o)}</b>{H.c.o.through ? ` · through ${fmtDate(H.c.o.through, { weekday: 'short' })}` : ''}</span>],
+                ['Target buffer', `${H.tgt} days ahead`],
+              ] as [string, React.ReactNode][]
+            ).map(([k, v]) => (
+              <div key={k} className="flex items-baseline justify-between gap-4 border-b py-2 text-sm">
+                <dt className="text-muted-foreground">{k}</dt>
+                <dd className="text-right tabular-nums">{v}</dd>
+              </div>
+            ))}
           </dl>
         </section>
-        <div className="kpis cols-6">
-          <Kpi label="Scheduled" value={M.sch} sub="Posting date in period" />
-          <Kpi label="Completed" value={M.done} sub={M.pct + '% of scheduled'} tone="good" />
-          <Kpi label="Remaining" value={M.rem} />
-          <Kpi label="Overdue" value={M.od} tone={M.od ? 'bad' : ''} />
-          <Kpi label="Finished in period" value={M.fin} sub="By completion time" />
-          <Kpi label="Avg completed / day" value={avg} sub="Elapsed days in period" />
-        </div>
+        <StatStrip
+          items={[
+            { label: 'Scheduled', value: M.sch, sub: 'Posting date in period' },
+            { label: 'Completed', value: M.done, sub: M.pct + '% of scheduled', tone: 'good' },
+            { label: 'Remaining', value: M.rem },
+            { label: 'Overdue', value: M.od, tone: M.od ? 'bad' : '' },
+            { label: 'Finished in period', value: M.fin, sub: 'By completion time' },
+            { label: 'Avg completed / day', value: avg, sub: 'Elapsed days in period' },
+          ]}
+        />
         <section className="panel">
           <div className="panel-h">
             <h2>{chartTitle}</h2>

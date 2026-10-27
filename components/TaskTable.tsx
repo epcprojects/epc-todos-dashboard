@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
+import { ChevronLeft, ChevronRight, Columns3, Download, Search, SlidersHorizontal, X } from 'lucide-react';
 import { STATUS, STATUS_KEYS, TEAMS, teamKeys, TEAM_SHORT, type Status, type Task, type Team } from '@/lib/constants';
 import { fmtDT } from '@/lib/dates';
 import { sched } from '@/lib/metrics';
@@ -62,14 +63,15 @@ function SearchBox({ tkey, value, onCommit }: { tkey: string; value: string; onC
     }
   }, [value]);
   return (
-    <label className="field search">
-      <span>Search tasks</span>
+    <label className="relative block w-full sm:w-72">
+      <span className="sr">Search tasks</span>
+      <Search className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground" />
       <input
-        className="inp"
+        className="inp !pl-9"
         type="search"
         id={`q-${tkey}`}
         value={val}
-        placeholder="Title, platform, pillar, copy, date…"
+        placeholder="Search title, platform, copy…"
         onChange={(e) => {
           setVal(e.target.value);
           if (timer.current) clearTimeout(timer.current);
@@ -165,6 +167,10 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
       lsSet('epc.cols.' + tkey, s.hidden);
     });
 
+  const [showFilters, setShowFilters] = useState(false);
+  const PILLS: [string, string][] = [['', 'All'], ['overdue', 'Overdue'], ['today', 'Due today'], ['next7', 'Next 7 days'], ['unfinished', 'Unfinished'], ['donetoday', 'Done today']];
+  const quickPills: [string, string][] = PILLS.some(([v]) => v === f.quick) ? PILLS : [...PILLS, [f.quick, (QUICK.find(([v]) => v === f.quick) || [f.quick, f.quick === 'unassigned' ? 'Unassigned' : f.quick])[1]]];
+  const advCount = [f.status, f.platform, f.pillar, f.type, f.day, f.team, f.sheet, f.workbook, f.from, f.to, f.cfrom, f.cto].filter(Boolean).length + (f.arch !== 'active' ? 1 : 0);
   const hasFilters = !!(st.q || Object.entries(f).some(([k, v]) => (k === 'arch' ? v !== 'active' : !!v)));
   const clearFilters = () =>
     set((s) => {
@@ -188,90 +194,112 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
 
   return (
     <div id={`tt-${tkey}`}>
-      <div className="filters" role="search">
+      <div role="search" className="flex flex-wrap items-center gap-2">
         <SearchBox tkey={tkey} value={st.q} onCommit={(v) => set((s) => { s.q = v; s.page = 1; })} />
-        <label className="field">
-          <span>Quick view</span>
-          <select className="inp" id={`fq-${tkey}`} value={f.quick} onChange={(e) => setF('quick', e.target.value)}>
-            {QUICK.concat(admin ? [['unassigned', 'Unassigned']] : []).map(([v, l]) => (
-              <option key={v} value={v}>
-                {l}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label className="field">
-          <span>Status</span>
-          <select className="inp" id={`fs-${tkey}`} value={f.status} onChange={(e) => setF('status', e.target.value)}>
-            <option value="">All statuses</option>
-            {STATUS_KEYS.map((s) => (
-              <option key={s} value={s}>
-                {STATUS[s]}
-              </option>
-            ))}
-          </select>
-        </label>
-        <Opt id={`fp-${tkey}`} label="Platform" all="All platforms" vals={plats} cur={f.platform} on={(v) => setF('platform', v)} />
-        <Opt id={`fpl-${tkey}`} label="Content pillar" all="All pillars" vals={pillars} cur={f.pillar} on={(v) => setF('pillar', v)} />
-        <Opt id={`ft-${tkey}`} label="Type" all="All types" vals={types} cur={f.type} on={(v) => setF('type', v)} />
-        <Opt id={`fd-${tkey}`} label="Day" all="All days" vals={days} cur={f.day} on={(v) => setF('day', v)} />
-        <label className="field">
-          <span>Posting date from</span>
-          <input className="inp" type="date" id={`ff-${tkey}`} value={f.from} onChange={(e) => setF('from', e.target.value)} />
-        </label>
-        <label className="field">
-          <span>Posting date to</span>
-          <input className="inp" type="date" id={`fto-${tkey}`} value={f.to} onChange={(e) => setF('to', e.target.value)} />
-        </label>
-        {admin && (
-          <>
-            <label className="field">
-              <span>Assigned team</span>
-              <select className="inp" id={`fteam-${tkey}`} value={f.team} onChange={(e) => setF('team', e.target.value)}>
-                <option value="">All teams</option>
-                {teamKeys().map((x) => (
-                  <option key={x} value={x}>
-                    {TEAMS[x]}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <Opt id={`fsh-${tkey}`} label="Sheet" all="All sheets" vals={sheets} cur={f.sheet} on={(v) => setF('sheet', v)} />
-            <Opt id={`fwb-${tkey}`} label="Workbook" all="All workbooks" vals={workbooks} cur={f.workbook} on={(v) => setF('workbook', v)} />
-            <label className="field">
-              <span>Completed from</span>
-              <input className="inp" type="date" id={`fcf-${tkey}`} value={f.cfrom} onChange={(e) => setF('cfrom', e.target.value)} />
-            </label>
-            <label className="field">
-              <span>Completed to</span>
-              <input className="inp" type="date" id={`fct-${tkey}`} value={f.cto} onChange={(e) => setF('cto', e.target.value)} />
-            </label>
-            <label className="field">
-              <span>Archive</span>
-              <select className="inp" id={`far-${tkey}`} value={f.arch} onChange={(e) => setF('arch', e.target.value)}>
-                <option value="active">Active tasks</option>
-                <option value="archived">Archived only</option>
-                <option value="all">Active and archived</option>
-              </select>
-            </label>
-          </>
-        )}
-      </div>
-
-      <div className="toolbar">
-        <div className="row">
-          <b className="num">{list.length}</b> <span className="muted">of {activeBase.length} tasks</span>
+        <div className="flex flex-wrap items-center gap-1" role="group" aria-label="Quick view">
+          {quickPills.map(([v, l]) => (
+            <button
+              key={v}
+              type="button"
+              aria-pressed={f.quick === v}
+              onClick={() => setF('quick', v)}
+              className={`h-8 rounded-full border px-3 text-[13px] font-semibold transition-colors ${f.quick === v ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-muted-foreground hover:bg-muted hover:text-foreground'}`}
+            >
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="ml-auto flex items-center gap-2">
           {hasFilters && (
             <button className="btn sm ghost" onClick={clearFilters}>
-              Clear filters
+              <X className="size-3.5" /> Clear
             </button>
           )}
+          <button className="btn sm" aria-expanded={showFilters} onClick={() => setShowFilters((x) => !x)}>
+            <SlidersHorizontal className="size-3.5" /> Filters
+            {advCount ? <span className="ml-0.5 grid size-5 place-items-center rounded-full bg-primary text-[11px] font-bold text-primary-foreground">{advCount}</span> : null}
+          </button>
+        </div>
+      </div>
+
+      {showFilters && (
+        <div className="filters mt-3">
+          <label className="field">
+            <span>Quick view</span>
+            <select className="inp" id={`fq-${tkey}`} value={f.quick} onChange={(e) => setF('quick', e.target.value)}>
+              {QUICK.concat(admin ? [['unassigned', 'Unassigned']] : []).map(([v, l]) => (
+                <option key={v} value={v}>
+                  {l}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="field">
+            <span>Status</span>
+            <select className="inp" id={`fs-${tkey}`} value={f.status} onChange={(e) => setF('status', e.target.value)}>
+              <option value="">All statuses</option>
+              {STATUS_KEYS.map((s) => (
+                <option key={s} value={s}>
+                  {STATUS[s]}
+                </option>
+              ))}
+            </select>
+          </label>
+          <Opt id={`fp-${tkey}`} label="Platform" all="All platforms" vals={plats} cur={f.platform} on={(v) => setF('platform', v)} />
+          <Opt id={`fpl-${tkey}`} label="Content pillar" all="All pillars" vals={pillars} cur={f.pillar} on={(v) => setF('pillar', v)} />
+          <Opt id={`ft-${tkey}`} label="Type" all="All types" vals={types} cur={f.type} on={(v) => setF('type', v)} />
+          <Opt id={`fd-${tkey}`} label="Day" all="All days" vals={days} cur={f.day} on={(v) => setF('day', v)} />
+          <label className="field">
+            <span>Posting date from</span>
+            <input className="inp" type="date" id={`ff-${tkey}`} value={f.from} onChange={(e) => setF('from', e.target.value)} />
+          </label>
+          <label className="field">
+            <span>Posting date to</span>
+            <input className="inp" type="date" id={`fto-${tkey}`} value={f.to} onChange={(e) => setF('to', e.target.value)} />
+          </label>
+          {admin && (
+            <>
+              <label className="field">
+                <span>Assigned team</span>
+                <select className="inp" id={`fteam-${tkey}`} value={f.team} onChange={(e) => setF('team', e.target.value)}>
+                  <option value="">All teams</option>
+                  {teamKeys().map((x) => (
+                    <option key={x} value={x}>
+                      {TEAMS[x]}
+                    </option>
+                  ))}
+                </select>
+              </label>
+              <Opt id={`fsh-${tkey}`} label="Sheet" all="All sheets" vals={sheets} cur={f.sheet} on={(v) => setF('sheet', v)} />
+              <Opt id={`fwb-${tkey}`} label="Workbook" all="All workbooks" vals={workbooks} cur={f.workbook} on={(v) => setF('workbook', v)} />
+              <label className="field">
+                <span>Completed from</span>
+                <input className="inp" type="date" id={`fcf-${tkey}`} value={f.cfrom} onChange={(e) => setF('cfrom', e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Completed to</span>
+                <input className="inp" type="date" id={`fct-${tkey}`} value={f.cto} onChange={(e) => setF('cto', e.target.value)} />
+              </label>
+              <label className="field">
+                <span>Archive</span>
+                <select className="inp" id={`far-${tkey}`} value={f.arch} onChange={(e) => setF('arch', e.target.value)}>
+                  <option value="active">Active tasks</option>
+                  <option value="archived">Archived only</option>
+                  <option value="all">Active and archived</option>
+                </select>
+              </label>
+            </>
+          )}
+        </div>
+      )}
+
+      <div className="toolbar">
+        <div className="text-sm text-muted-foreground">
+          <b className="num font-semibold text-foreground">{list.length}</b> of {activeBase.length} tasks
         </div>
         <div className="row">
           <label className="row" style={{ gap: 6 }}>
-            <span className="muted small" style={{ fontWeight: 700 }}>
-              Sort
-            </span>
+            <span className="text-sm text-muted-foreground">Sort</span>
             <select className="inp" style={{ width: 'auto' }} id={`sort-${tkey}`} value={st.sort} onChange={(e) => set((s) => { s.sort = e.target.value; s.page = 1; })}>
               {SORTS.map(([v, l]) => (
                 <option key={v} value={v}>
@@ -281,7 +309,9 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
             </select>
           </label>
           <details className="colmenu">
-            <summary className="btn sm">Columns</summary>
+            <summary className="btn sm">
+              <Columns3 className="size-3.5" /> Columns
+            </summary>
             <div className="menu">
               {allCols.map((c) => (
                 <label key={c.k}>
@@ -298,7 +328,7 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
               toast('Saved ' + exportTasksFile(list, 'csv', today));
             }}
           >
-            Export CSV
+            <Download className="size-3.5" /> CSV
           </button>
           <button
             className="btn sm"
@@ -307,10 +337,153 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
               toast('Saved ' + exportTasksFile(list, 'xlsx', today));
             }}
           >
-            Export Excel
+            <Download className="size-3.5" /> Excel
           </button>
         </div>
       </div>
+
+      {list.length ? (
+        <>
+          <div className="tw">
+            <table className="t">
+              <thead>
+                <tr>
+                  {admin && (
+                    <th className="chk">
+                      <input
+                        type="checkbox"
+                        aria-label="Select all on this page"
+                        checked={pageSel}
+                        onChange={(e) => set((s) => slice.forEach((t) => (e.target.checked ? s.sel.add(t.id) : s.sel.delete(t.id))))}
+                      />
+                    </th>
+                  )}
+                  {cols.map((c) => (
+                    <th key={c.k} scope="col">
+                      {c.h}
+                    </th>
+                  ))}
+                  <th scope="col" className="stk-st">Status</th>
+                  <th scope="col" className="stk-act">
+                    <span className="sr">Details</span>
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {slice.map((t) => {
+                  const sf = sched(t, today);
+                  return (
+                    <tr
+                      key={t.id}
+                      data-row
+                      className={st.sel.has(t.id) ? 'sel' : ''}
+                      onClick={(e) => {
+                        if (!(e.target as HTMLElement).closest('select,a,input,button,label')) openDrawer(t.id);
+                      }}
+                    >
+                      {admin && (
+                        <td className="chk">
+                          <input
+                            type="checkbox"
+                            aria-label="Select task"
+                            checked={st.sel.has(t.id)}
+                            onChange={(e) => set((s) => (e.target.checked ? s.sel.add(t.id) : s.sel.delete(t.id)))}
+                          />
+                        </td>
+                      )}
+                      {cols.map((c) => {
+                        if (!c.sys) return <Cell key={c.k} t={t} h={c.h} />;
+                        switch (c.k) {
+                          case '__team':
+                            return (
+                              <td key={c.k}>
+                                <span className="tag">{TEAM_SHORT[t.team] || t.team}</span>
+                              </td>
+                            );
+                          case '__sched':
+                            return (
+                              <td key={c.k}>
+                                <Flag k={sf.k} l={sf.l} />
+                              </td>
+                            );
+                          case '__completed':
+                            return (
+                              <td key={c.k} className="num">
+                                {t.completedAt ? fmtDT(t.completedAt) : '—'}
+                              </td>
+                            );
+                          case '__notes':
+                            return (
+                              <td key={c.k}>
+                                <div className="clip">{t.notes || ''}</div>
+                              </td>
+                            );
+                          case '__sheet':
+                            return <td key={c.k}>{t.sheet}</td>;
+                          case '__id':
+                            return (
+                              <td key={c.k} className="num">
+                                {t.id}
+                              </td>
+                            );
+                        }
+                        return <td key={c.k} />;
+                      })}
+                      <td className="stk-st">
+                        <StatusSelect t={t} />
+                        {t.archived ? (
+                          <>
+                            {' '}
+                            <span className="tag">Archived</span>
+                          </>
+                        ) : null}
+                      </td>
+                      <td className="stk-act">
+                        <button className="btn sm" onClick={() => openDrawer(t.id)} aria-label={`View details: ${displayTitle(t)}`}>
+                          View details
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+          <div className="pager">
+            <div className="flex items-center gap-3 text-sm text-muted-foreground">
+              <span className="num">
+                {(page - 1) * st.size + 1}–{Math.min(page * st.size, list.length)} of {list.length}
+              </span>
+              <div className="flex items-center gap-1">
+                <button className="btn sm" aria-label="Previous page" disabled={page <= 1} onClick={() => set((s) => (s.page = page - 1))}>
+                  <ChevronLeft className="size-4" />
+                </button>
+                <span className="num px-1">
+                  {page} / {pages}
+                </span>
+                <button className="btn sm" aria-label="Next page" disabled={page >= pages} onClick={() => set((s) => (s.page = page + 1))}>
+                  <ChevronRight className="size-4" />
+                </button>
+              </div>
+            </div>
+            <label className="row" style={{ gap: 6 }}>
+              <span className="text-sm text-muted-foreground">Rows per page</span>
+              <select className="inp" style={{ width: 'auto' }} id={`ps-${tkey}`} value={st.size} onChange={(e) => set((s) => { s.size = +e.target.value; s.page = 1; })}>
+                {[25, 50, 100].map((n) => (
+                  <option key={n}>{n}</option>
+                ))}
+              </select>
+            </label>
+          </div>
+        </>
+      ) : (
+        <div className="empty">
+          <p>No tasks match these filters.</p>
+          <button className="btn" onClick={clearFilters}>
+            Clear filters
+          </button>
+        </div>
+      )}
 
       {admin && selN > 0 && (
         <div className="bulk" role="region" aria-label="Bulk actions">
@@ -390,146 +563,6 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
           </button>
           <button className="btn sm ghost" style={{ color: 'inherit' }} onClick={() => set((s) => s.sel.clear())}>
             Clear selection
-          </button>
-        </div>
-      )}
-
-      {list.length ? (
-        <>
-          <div className="tw">
-            <table className="t">
-              <thead>
-                <tr>
-                  {admin && (
-                    <th className="chk">
-                      <input
-                        type="checkbox"
-                        aria-label="Select all on this page"
-                        checked={pageSel}
-                        onChange={(e) => set((s) => slice.forEach((t) => (e.target.checked ? s.sel.add(t.id) : s.sel.delete(t.id))))}
-                      />
-                    </th>
-                  )}
-                  {cols.map((c) => (
-                    <th key={c.k} scope="col">
-                      {c.h}
-                    </th>
-                  ))}
-                  <th scope="col">Status</th>
-                  <th scope="col">
-                    <span className="sr">Details</span>
-                  </th>
-                </tr>
-              </thead>
-              <tbody>
-                {slice.map((t) => {
-                  const sf = sched(t, today);
-                  return (
-                    <tr
-                      key={t.id}
-                      data-row
-                      className={st.sel.has(t.id) ? 'sel' : ''}
-                      onClick={(e) => {
-                        if (!(e.target as HTMLElement).closest('select,a,input,button,label')) openDrawer(t.id);
-                      }}
-                    >
-                      {admin && (
-                        <td className="chk">
-                          <input
-                            type="checkbox"
-                            aria-label="Select task"
-                            checked={st.sel.has(t.id)}
-                            onChange={(e) => set((s) => (e.target.checked ? s.sel.add(t.id) : s.sel.delete(t.id)))}
-                          />
-                        </td>
-                      )}
-                      {cols.map((c) => {
-                        if (!c.sys) return <Cell key={c.k} t={t} h={c.h} />;
-                        switch (c.k) {
-                          case '__team':
-                            return (
-                              <td key={c.k}>
-                                <span className="tag">{TEAM_SHORT[t.team] || t.team}</span>
-                              </td>
-                            );
-                          case '__sched':
-                            return (
-                              <td key={c.k}>
-                                <Flag k={sf.k} l={sf.l} />
-                              </td>
-                            );
-                          case '__completed':
-                            return (
-                              <td key={c.k} className="num">
-                                {t.completedAt ? fmtDT(t.completedAt) : '—'}
-                              </td>
-                            );
-                          case '__notes':
-                            return (
-                              <td key={c.k}>
-                                <div className="clip">{t.notes || ''}</div>
-                              </td>
-                            );
-                          case '__sheet':
-                            return <td key={c.k}>{t.sheet}</td>;
-                          case '__id':
-                            return (
-                              <td key={c.k} className="num">
-                                {t.id}
-                              </td>
-                            );
-                        }
-                        return <td key={c.k} />;
-                      })}
-                      <td>
-                        <StatusSelect t={t} />
-                        {t.archived ? (
-                          <>
-                            {' '}
-                            <span className="tag">Archived</span>
-                          </>
-                        ) : null}
-                      </td>
-                      <td>
-                        <button className="btn sm" onClick={() => openDrawer(t.id)} aria-label={`View details: ${displayTitle(t)}`}>
-                          View details
-                        </button>
-                      </td>
-                    </tr>
-                  );
-                })}
-              </tbody>
-            </table>
-          </div>
-          <div className="pager">
-            <div className="row">
-              <button className="btn sm" disabled={page <= 1} onClick={() => set((s) => (s.page = page - 1))}>
-                Previous
-              </button>
-              <span className="num">
-                Page {page} of {pages}
-              </span>
-              <button className="btn sm" disabled={page >= pages} onClick={() => set((s) => (s.page = page + 1))}>
-                Next
-              </button>
-            </div>
-            <label className="row" style={{ gap: 6 }}>
-              <span className="muted small" style={{ fontWeight: 700 }}>
-                Rows per page
-              </span>
-              <select className="inp" style={{ width: 'auto' }} id={`ps-${tkey}`} value={st.size} onChange={(e) => set((s) => { s.size = +e.target.value; s.page = 1; })}>
-                {[25, 50, 100].map((n) => (
-                  <option key={n}>{n}</option>
-                ))}
-              </select>
-            </label>
-          </div>
-        </>
-      ) : (
-        <div className="empty">
-          <p>No tasks match these filters.</p>
-          <button className="btn" onClick={clearFilters}>
-            Clear filters
           </button>
         </div>
       )}
