@@ -7,6 +7,7 @@ import { uploadToS3 } from '@/lib/client/s3upload';
 import { fmtDT } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { PlatformIcon } from '../PlatformIcon';
 import { useApp } from '../store';
 import { PageHeader } from '../ui';
 
@@ -478,7 +479,7 @@ export function ManageView() {
           <div className="mg-folders">
             {FOLDERS.map((f) => (
               <button key={f.key} className="mg-folder" onClick={() => open(f.key)}>
-                <FolderIcon size={44} />
+                <PlatformIcon name={f.key} className="size-11" />
                 <b>{f.label}</b>
                 <span className="muted small">
                   {counts[f.key].n} {counts[f.key].n === 1 ? 'file' : 'files'} · {formatBytes(counts[f.key].bytes)}

@@ -1,9 +1,11 @@
 'use client';
-import { TEAMS, type Role, type Team } from '@/lib/constants';
+import { useMemo, useState } from 'react';
+import { Search, X } from 'lucide-react';
+import { STATUS, STATUS_KEYS, TEAMS, type Role, type Team } from '@/lib/constants';
 import { addDays, fmtDate, localDay } from '@/lib/dates';
 import { coverage, isOverdue } from '@/lib/metrics';
 import { prioCmp } from '@/lib/tasks';
-import { plural } from '@/lib/text';
+import { plural, splitPlat } from '@/lib/text';
 import { useApp } from '../store';
 import { QItem } from '../parts';
 import { CovScale, PageHeader, StatStrip } from '../ui';
@@ -98,7 +100,23 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
 }
 
 function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list: ReturnType<typeof useApp>['act']; today: string; qExpand: Record<string, boolean>; setQExpand: (k: string) => void }) {
-  const open = list.filter((t) => t.status !== 'completed');
+  const [fq, setFq] = useState({ q: '', status: '', platform: '', pillar: '', type: '' });
+  const set = (k: keyof typeof fq, v: string) => setFq((x) => ({ ...x, [k]: v }));
+  const all = list.filter((t) => t.status !== 'completed');
+  const uniq = (get: (t: (typeof list)[number]) => string[]) => [...new Set(all.flatMap(get).filter(Boolean))].sort((a, b) => a.localeCompare(b));
+  const plats = useMemo(() => uniq((t) => splitPlat(t.platform)), [all]); // eslint-disable-line react-hooks/exhaustive-deps
+  const pillars = useMemo(() => uniq((t) => [t.pillar]), [all]); // eslint-disable-line react-hooks/exhaustive-deps
+  const types = useMemo(() => uniq((t) => [t.type]), [all]); // eslint-disable-line react-hooks/exhaustive-deps
+  const term = fq.q.trim().toLowerCase();
+  const open = all.filter(
+    (t) =>
+      (!term || [t.title, t.platform, t.pillar, t.type].some((x) => String(x || '').toLowerCase().includes(term))) &&
+      (!fq.status || t.status === fq.status) &&
+      (!fq.platform || splitPlat(t.platform).includes(fq.platform)) &&
+      (!fq.pillar || t.pillar === fq.pillar) &&
+      (!fq.type || t.type === fq.type),
+  );
+  const filtered = !!(fq.q || fq.status || fq.platform || fq.pillar || fq.type);
   const secs: [string, string, (t: (typeof list)[number]) => boolean][] = [
     ['Overdue', 'overdue', (t) => !!t.postDate && t.postDate < today],
     ['Due Today', 'today', (t) => t.postDate === today],
@@ -107,12 +125,52 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
     ['No posting date', 'nodate', (t) => !t.postDate],
   ];
   const cmp = prioCmp(today);
-  if (!open.length) return <div className="okbox">Every assigned task is completed. Nice work.</div>;
+  if (!all.length) return <div className="okbox">Every assigned task is completed. Nice work.</div>;
+  const sel = (label: string, k: keyof typeof fq, allLabel: string, vals: string[]) => (
+    <label className="field">
+      <span>{label}</span>
+      <select className="inp" value={fq[k]} onChange={(e) => set(k, e.target.value)}>
+        <option value="">{allLabel}</option>
+        {vals.map((v) => (
+          <option key={v} value={v}>
+            {v}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
   return (
     <div className="queue">
+      <div className="filters mb-5" role="search" aria-label="Filter the work queue">
+        <label className="field relative">
+          <span>Search</span>
+          <Search className="pointer-events-none absolute bottom-2.5 left-3 size-4 text-muted-foreground" />
+          <input className="inp !pl-9" type="search" value={fq.q} placeholder="Search tasks…" onChange={(e) => set('q', e.target.value)} />
+        </label>
+        <label className="field">
+          <span>Status</span>
+          <select className="inp" value={fq.status} onChange={(e) => set('status', e.target.value)}>
+            <option value="">All open statuses</option>
+            {STATUS_KEYS.filter((k) => k !== 'completed').map((k) => (
+              <option key={k} value={k}>
+                {STATUS[k]}
+              </option>
+            ))}
+          </select>
+        </label>
+        {sel('Platform', 'platform', 'All platforms', plats)}
+        {sel('Content pillar', 'pillar', 'All pillars', pillars)}
+        {sel('Type', 'type', 'All types', types)}
+        {filtered ? (
+          <button className="btn" onClick={() => setFq({ q: '', status: '', platform: '', pillar: '', type: '' })}>
+            <X className="size-4" /> Clear filters
+          </button>
+        ) : null}
+      </div>
+      {filtered && !open.length ? <p className="muted">No open tasks match these filters.</p> : null}
       {secs.map(([label, k, fn]) => {
         const l = open.filter(fn).sort(cmp);
-        if (!l.length && k === 'nodate') return null;
+        if (!l.length && (k === 'nodate' || filtered)) return null;
         const ek = team + k;
         const lim = qExpand[ek] ? l.length : 12;
         return (

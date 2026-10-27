@@ -2,6 +2,7 @@
 import type { ReactNode } from 'react';
 import { ROLES, STATUS, STATUS_KEYS, type HistoryEntry, type Status } from '@/lib/constants';
 import { pctOf, platBadge, splitPlat } from '@/lib/text';
+import { PlatformIcon, hasPlatformIcon } from './PlatformIcon';
 import type { CTask } from '@/lib/tasks';
 import { useApp } from './store';
 
@@ -27,7 +28,7 @@ export function PlatPills({ value }: { value: string }) {
         <span key={i}>
           {i > 0 && ' '}
           <span className="tag plat">
-            <b aria-hidden="true">{platBadge(p)}</b>
+            {hasPlatformIcon(p) ? <PlatformIcon name={p} className="size-[18px]" /> : <b aria-hidden="true">{platBadge(p)}</b>}
             {p}
           </span>
         </span>
