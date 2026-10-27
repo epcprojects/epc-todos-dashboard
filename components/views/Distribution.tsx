@@ -43,7 +43,7 @@ export function Distribution() {
     <>
       <PageHeader
         title="Task distribution"
-        sub="Assign, reassign and manage every imported task. Select rows for bulk actions."
+        sub="Assign work and manage every task. Tick rows for bulk actions."
         actions={
           <button className="btn primary" onClick={() => nav('import')}>
             <Upload className="size-4" /> Upload Content Excel

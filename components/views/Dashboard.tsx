@@ -279,7 +279,7 @@ export function Dashboard() {
             <CardContent className="grid gap-6 border-t pt-5 md:grid-cols-[170px_1fr] md:items-center">
               <div>
                 <div className="flex items-baseline gap-1.5">
-                  <span className="text-5xl leading-none font-semibold tracking-tight tabular-nums">{H.c.o.none ? '—' : H.c.o.days}</span>
+                  <span className="font-heading text-5xl leading-none font-semibold tracking-tight tabular-nums">{H.c.o.none ? '—' : H.c.o.days}</span>
                   <span className="text-sm text-muted-foreground">{H.c.o.none ? '' : H.c.o.days === 1 ? 'day ahead' : 'days ahead'}</span>
                 </div>
                 <p className="mt-2 text-[13px] leading-snug text-muted-foreground">
@@ -302,7 +302,7 @@ export function Dashboard() {
               ].map((x) => (
                 <div key={x.l} className="px-3 pt-4 pb-1">
                   <div className="text-[13px] text-muted-foreground">{x.l}</div>
-                  <div className="mt-0.5 text-xl font-semibold tabular-nums">{x.v}</div>
+                  <div className="font-heading mt-0.5 text-xl font-semibold tabular-nums">{x.v}</div>
                   <div className="text-[13px] text-muted-foreground">{x.s}</div>
                 </div>
               ))}
@@ -348,7 +348,7 @@ export function Dashboard() {
                 <span className="flex items-center gap-2"><ListTodo className="size-4" /> Active tasks</span>
                 <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
-              <div className="text-3xl font-semibold tracking-tight tabular-nums">{act.length}</div>
+              <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">{act.length}</div>
               <div>
                 <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
                   {seg.map((s) => (
@@ -367,7 +367,7 @@ export function Dashboard() {
                 <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
               <div className="flex items-end justify-between gap-3">
-                <div className="text-3xl font-semibold tracking-tight tabular-nums">
+                <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">
                   {counts.completed} <span className="text-base font-medium text-muted-foreground">{pctOf(counts.completed, act.length)}%</span>
                 </div>
                 <Sparkline values={spark} />
@@ -381,7 +381,7 @@ export function Dashboard() {
                 <span className="flex items-center gap-2"><AlertCircle className={`size-4 ${od.length ? 'text-danger' : ''}`} /> Overdue</span>
                 <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
-              <div className={`text-3xl font-semibold tracking-tight tabular-nums ${od.length ? 'text-danger' : ''}`}>{od.length}</div>
+              <div className={`font-heading text-3xl font-semibold tracking-tight tabular-nums ${od.length ? 'text-danger' : ''}`}>{od.length}</div>
               <div className="text-[13px] text-muted-foreground">
                 {od.length ? [...new Set(od.map((t) => t.team))].map((k) => `${TEAMS[k] || k} ${od.filter((t) => t.team === k).length}`).join(' · ') : 'Nothing past its posting date'}
               </div>
@@ -391,7 +391,7 @@ export function Dashboard() {
                 <span className="flex items-center gap-2"><CalendarCheck className="size-4" /> Today</span>
                 <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
               </div>
-              <div className="text-3xl font-semibold tracking-tight tabular-nums">
+              <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">
                 {T.done}<span className="text-xl font-medium text-muted-foreground"> / {T.sch}</span>
               </div>
               <div>

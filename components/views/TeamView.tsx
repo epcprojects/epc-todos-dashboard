@@ -120,9 +120,9 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
             <h3>
               {label} <span className={`pill ${k === 'overdue' ? 'fl-overdue' : k === 'today' ? 'fl-today' : 'fl-later'} num`}>{l.length}</span>
             </h3>
-            {l.length ? l.slice(0, lim).map((t) => <QItem key={t.id} t={t} today={today} />) : <p className="muted">Nothing here.</p>}
+            {l.length ? <div className="qlist">{l.slice(0, lim).map((t) => <QItem key={t.id} t={t} today={today} />)}</div> : <p className="muted">Nothing here.</p>}
             {l.length > lim ? (
-              <button className="btn sm" onClick={() => setQExpand(ek)}>
+              <button className="btn sm mt-2" onClick={() => setQExpand(ek)}>
                 Show all {l.length}
               </button>
             ) : null}

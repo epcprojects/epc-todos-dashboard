@@ -121,7 +121,7 @@ export function ImportsView() {
     <>
       <PageHeader
         title="Imports"
-        sub="Every Excel workbook imported into the dashboard."
+        sub="Every workbook you have imported."
         actions={
           <button className="btn primary" onClick={() => nav('import')}>
             <Upload className="size-4" /> Upload Content Excel

@@ -172,7 +172,7 @@ export function StatStrip({ items }: { items: StatItem[] }) {
         const inner = (
           <>
             <span className="text-[13px] font-medium text-muted-foreground">{it.label}</span>
-            <span className={`mt-1 text-[26px] leading-none font-semibold tracking-tight tabular-nums ${it.tone === 'bad' ? 'text-danger' : it.tone === 'good' ? 'text-success' : ''}`}>{it.value}</span>
+            <span className={`font-heading mt-1 text-[26px] leading-none font-semibold tracking-tight tabular-nums ${it.tone === 'bad' ? 'text-danger' : it.tone === 'good' ? 'text-success' : ''}`}>{it.value}</span>
             {it.sub ? <span className="mt-1.5 text-[13px] leading-snug text-muted-foreground">{it.sub}</span> : null}
           </>
         );

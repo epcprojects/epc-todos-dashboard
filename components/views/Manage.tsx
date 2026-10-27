@@ -1,10 +1,12 @@
 'use client';
-import { Download, LayoutGrid, List, RefreshCw, Trash2, Upload } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, LayoutGrid, List, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, type ManageFile } from '@/lib/manage-config';
 import { api, lsGet, lsSet, sleep } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
 import { fmtDT } from '@/lib/dates';
+import { Button } from '@/components/ui/button';
+import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { useApp } from '../store';
 import { PageHeader } from '../ui';
 
@@ -37,13 +39,101 @@ function FolderIcon({ size = 28 }: { size?: number }) {
     </svg>
   );
 }
-function FileBadge({ name, big }: { name: string; big?: boolean }) {
+function kindOf(name: string) {
   const e = extOf(name);
-  const kind = IMAGE_EXTENSIONS.includes(e) ? 'img' : VIDEO_EXTENSIONS.includes(e) ? 'vid' : ['pdf'].includes(e) ? 'pdf' : ['xls', 'xlsx', 'csv'].includes(e) ? 'xls' : ['doc', 'docx', 'txt', 'md'].includes(e) ? 'doc' : 'oth';
+  if (IMAGE_EXTENSIONS.includes(e)) return 'img';
+  if (VIDEO_EXTENSIONS.includes(e)) return 'vid';
+  if (e === 'pdf') return 'pdf';
+  if (['xls', 'xlsx', 'csv'].includes(e)) return 'xls';
+  if (['doc', 'docx', 'txt', 'md', 'rtf'].includes(e)) return 'doc';
+  if (['zip', 'rar', '7z', 'gz', 'tar'].includes(e)) return 'zip';
+  if (['mp3', 'wav', 'm4a', 'aac', 'ogg'].includes(e)) return 'aud';
+  return 'oth';
+}
+const KIND_ICON = { img: FileImage, vid: FileVideo, pdf: FileText, xls: FileSpreadsheet, doc: FileText, zip: FileArchive, aud: FileAudio, oth: FileGeneric };
+
+function FileBadge({ name, big }: { name: string; big?: boolean }) {
+  const kind = kindOf(name);
+  const Icon = KIND_ICON[kind];
   return (
     <span className={`mg-badge mg-${kind}${big ? ' big' : ''}`} aria-hidden="true">
-      {(e || 'file').slice(0, 4).toUpperCase()}
+      <Icon className={big ? 'size-8' : 'size-4'} strokeWidth={1.9} />
     </span>
+  );
+}
+
+/** Image / video / PDF preview in a modal, with previous / next across the folder. */
+function PreviewDialog({ file, index, total, url, canDelete, onClose, onPrev, onNext, onDownload, onDelete }: { file: ManageFile; index: number; total: number; url?: string; canDelete: boolean; onClose: () => void; onPrev: () => void; onNext: () => void; onDownload: () => void; onDelete: () => void }) {
+  useEffect(() => {
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'ArrowLeft') onPrev();
+      if (e.key === 'ArrowRight') onNext();
+    };
+    window.addEventListener('keydown', h);
+    return () => window.removeEventListener('keydown', h);
+  }, [onPrev, onNext]);
+  const kind = kindOf(file.name);
+  return (
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent showCloseButton={false} className="max-w-[94vw] gap-0 overflow-hidden p-0 sm:max-w-5xl">
+        <div className="flex items-center gap-3 border-b px-4 py-3">
+          <FileBadge name={file.name} />
+          <div className="min-w-0 flex-1">
+            <DialogTitle className="truncate text-[15px] font-semibold">{file.name}</DialogTitle>
+            <DialogDescription className="text-[13px]">
+              {formatBytes(file.size)} · {label(file.folder)} · {fmtDT(file.lastModified)}
+            </DialogDescription>
+          </div>
+          <Button variant="outline" size="lg" onClick={onDownload}>
+            <Download /> Download
+          </Button>
+          {canDelete ? (
+            <Button variant="destructive" size="lg" onClick={onDelete}>
+              <Trash2 /> Delete
+            </Button>
+          ) : null}
+          <Button variant="ghost" size="icon-lg" onClick={onClose} aria-label="Close preview">
+            <X />
+          </Button>
+        </div>
+        <div className="relative grid min-h-[50vh] place-items-center bg-muted/60 p-3">
+          {total > 1 ? (
+            <>
+              <Button variant="secondary" size="icon-lg" className="absolute top-1/2 left-3 z-10 -translate-y-1/2 rounded-full shadow-md" onClick={onPrev} aria-label="Previous file">
+                <ChevronLeft />
+              </Button>
+              <Button variant="secondary" size="icon-lg" className="absolute top-1/2 right-3 z-10 -translate-y-1/2 rounded-full shadow-md" onClick={onNext} aria-label="Next file">
+                <ChevronRight />
+              </Button>
+            </>
+          ) : null}
+          {kind === 'img' && url ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={url} alt={file.name} className="max-h-[72vh] max-w-full rounded-md object-contain" />
+          ) : kind === 'vid' && url ? (
+            <video key={url} src={url} controls playsInline className="max-h-[72vh] max-w-full rounded-md bg-black" />
+          ) : kind === 'pdf' && url ? (
+            <iframe title={file.name} src={url} className="h-[72vh] w-full rounded-md bg-white" />
+          ) : kind === 'img' || kind === 'vid' || kind === 'pdf' ? (
+            <div className="text-sm text-muted-foreground">Loading preview…</div>
+          ) : (
+            <div className="flex flex-col items-center gap-3 py-16 text-center">
+              <FileBadge name={file.name} big />
+              <p className="text-sm text-muted-foreground">No preview for this file type.</p>
+              <Button onClick={onDownload}>
+                <Download /> Download
+              </Button>
+            </div>
+          )}
+        </div>
+        <div className="flex items-center justify-between border-t px-4 py-2 text-[13px] text-muted-foreground">
+          <span className="tabular-nums">
+            {index + 1} of {total}
+          </span>
+          <span>Use ← → to move between files</span>
+        </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -63,6 +153,7 @@ export function ManageView() {
   const [over, setOver] = useState(false);
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
+  const [pv, setPv] = useState<string | null>(null);
   const fileIn = useRef<HTMLInputElement>(null);
   const uid = useRef(1);
   const running = uploads.some((u) => u.status === 'queued' || u.status === 'uploading');
@@ -102,6 +193,32 @@ export function ManageView() {
     return l;
   }, [inFolder, q, sort, desc]);
   const visible = list.slice(0, shown);
+
+  // preview modal: current file plus its neighbours get signed view links
+  const pvIdx = pv ? list.findIndex((f) => f.key === pv) : -1;
+  const pvFile = pvIdx >= 0 ? list[pvIdx] : null;
+  const step = useCallback(
+    (d: number) => {
+      if (!list.length || pvIdx < 0) return;
+      setPv(list[(pvIdx + d + list.length) % list.length].key);
+    },
+    [list, pvIdx],
+  );
+  useEffect(() => {
+    if (pvIdx < 0) return;
+    const keys = [pvIdx, pvIdx + 1, pvIdx - 1]
+      .map((i) => list[(i + list.length) % list.length])
+      .filter((f) => f && !thumbs[f.key] && (IMAGE_EXTENSIONS.includes(extOf(f.name)) || VIDEO_EXTENSIONS.includes(extOf(f.name)) || extOf(f.name) === 'pdf'))
+      .map((f) => f.key);
+    if (!keys.length) return;
+    let alive = true;
+    api<{ urls: Record<string, string> }>('/api/manage/urls', { body: { keys: [...new Set(keys)] } })
+      .then((r) => alive && setThumbs((t) => ({ ...t, ...r.urls })))
+      .catch(() => {});
+    return () => {
+      alive = false;
+    };
+  }, [pvIdx, list, thumbs]);
 
   // thumbnails for images / videos in the grid (signed links, fetched in batches)
   useEffect(() => {
@@ -192,8 +309,8 @@ export function ManageView() {
   };
 
   /* ---------- delete / download ---------- */
-  const del = async () => {
-    const keys = [...sel];
+  const del = async (only?: string[]) => {
+    const keys = only ?? [...sel];
     if (!keys.length) return;
     const names = keys.map((k) => files.find((f) => f.key === k)?.name || k.split('/').pop() || k);
     const ok = await confirmBox({
@@ -269,8 +386,8 @@ export function ManageView() {
   return (
     <>
       <PageHeader
-        title="Manage files"
-        sub={isAdmin ? 'Browse, upload, download and delete the files in storage.' : 'Browse, download and upload files. Only the admin can delete.'}
+        title="Files"
+        sub={isAdmin ? 'Browse, upload and download media. You can also delete files.' : 'Browse, upload and download media. Only the admin can delete.'}
         eyebrow="Storage"
         actions={
           <button className="btn" onClick={() => void load()}>
@@ -388,10 +505,10 @@ export function ManageView() {
                           <input type="checkbox" aria-label={`Select ${f.name}`} checked={sel.has(f.key)} onChange={() => toggle(f.key)} />
                         </td>
                         <td>
-                          <a className="mg-name" href={`/api/manage/download?key=${encodeURIComponent(f.key)}&mode=view`} target="_blank" rel="noopener noreferrer" title="Open in a new tab">
+                          <button className="mg-name text-left" onClick={() => setPv(f.key)} title="Preview">
                             <FileBadge name={f.name} />
                             <span>{f.name}</span>
-                          </a>
+                          </button>
                         </td>
                         <td>{extOf(f.name).toUpperCase() || 'File'}</td>
                         <td className="num">{formatBytes(f.size)}</td>
@@ -416,7 +533,7 @@ export function ManageView() {
                       <label className="mg-check">
                         <input type="checkbox" aria-label={`Select ${f.name}`} checked={sel.has(f.key)} onChange={() => toggle(f.key)} />
                       </label>
-                      <a className="mg-thumb" href={`/api/manage/download?key=${encodeURIComponent(f.key)}&mode=view`} target="_blank" rel="noopener noreferrer" aria-label={`Open ${f.name}`}>
+                      <button className="mg-thumb w-full" onClick={() => setPv(f.key)} aria-label={`Preview ${f.name}`}>
                         {url && IMAGE_EXTENSIONS.includes(e) ? (
                           // eslint-disable-next-line @next/next/no-img-element
                           <img src={url} alt="" loading="lazy" />
@@ -425,7 +542,7 @@ export function ManageView() {
                         ) : (
                           <FileBadge name={f.name} big />
                         )}
-                      </a>
+                      </button>
                       <div className="mg-cap" title={f.name}>
                         <b>{f.name}</b>
                         <span className="muted small">
@@ -459,6 +576,24 @@ export function ManageView() {
         )}
       </section>
 
+      {pvFile && (
+        <PreviewDialog
+          file={pvFile}
+          index={pvIdx}
+          total={list.length}
+          url={thumbs[pvFile.key]}
+          canDelete={isAdmin}
+          onClose={() => setPv(null)}
+          onPrev={() => step(-1)}
+          onNext={() => step(1)}
+          onDownload={() => void download([pvFile.key])}
+          onDelete={() => {
+            const k = pvFile.key;
+            setPv(null);
+            void del([k]);
+          }}
+        />
+      )}
       {uploads.length > 0 && (
         <section className="mg-uploads" aria-label="Uploads" aria-live="polite">
           <div className="row" style={{ justifyContent: 'space-between' }}>

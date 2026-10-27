@@ -57,7 +57,7 @@ export function ImportPage() {
 
   return (
     <>
-      <PageHeader title="Content import" sub="Upload the Excel content calendar. Nothing is imported until you choose sheets, check the preview and confirm." eyebrow="Admin" />
+      <PageHeader title="Content import" sub="Upload your content calendar. Nothing is saved until you confirm." eyebrow="Admin" />
       <div
         className={`drop${over ? ' over' : ''}`}
         id="drop"
@@ -81,7 +81,7 @@ export function ImportPage() {
         </div>
         <h2>Upload Content Excel</h2>
         <p className="muted" style={{ margin: 0 }}>
-          .xlsx, .xls, .xlsm or .csv · the workbook is analyzed in your browser first, nothing is imported automatically
+          .xlsx, .xls, .xlsm or .csv · read in your browser, never uploaded
         </p>
         <label className="btn primary" htmlFor="file-in" style={{ cursor: 'pointer' }}>
           Choose Excel workbook
@@ -91,15 +91,20 @@ export function ImportPage() {
           or drag the file here
         </p>
       </div>
-      <section className="panel" style={{ marginTop: 18 }}>
-        <h2>How importing works</h2>
-        <ol className="muted" style={{ margin: '8px 0 0', paddingLeft: 22, lineHeight: 1.9 }}>
-          <li>All worksheets in the workbook are listed; tick only the ones that hold production work.</li>
-          <li>Preview each sheet: every column is kept. Confirm which columns hold the posting date, platform and title.</li>
-          <li>Choose who receives each sheet: Graphic Designer, Video Editor, Admin Only or Unassigned.</li>
-          <li>Review the summary. Rows already in the dashboard are flagged so you can skip, update or re-import them.</li>
-        </ol>
-      </section>
+      <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        {[
+          ['1', 'Pick sheets', 'Tick only the worksheets that hold production work.'],
+          ['2', 'Check the preview', 'Confirm which columns hold the date, platform and title.'],
+          ['3', 'Assign a team', 'Designer, Video Editor, any role you added, or Unassigned.'],
+          ['4', 'Confirm', 'Rows already in the dashboard are flagged so you can skip or update them.'],
+        ].map(([n, t, d]) => (
+          <div key={n} className="rounded-xl border bg-card p-4 shadow-(--shadow-card)">
+            <span className="grid size-7 place-items-center rounded-full bg-accent text-[13px] font-bold text-accent-foreground">{n}</span>
+            <div className="mt-3 text-sm font-semibold">{t}</div>
+            <p className="mt-1 text-[13px] leading-relaxed text-muted-foreground">{d}</p>
+          </div>
+        ))}
+      </div>
       {wizRef.current && <Wizard w={wizRef.current} bump={bump} close={close} />}
     </>
   );

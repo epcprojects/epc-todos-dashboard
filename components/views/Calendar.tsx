@@ -82,7 +82,7 @@ export function CalendarView() {
     <>
       <PageHeader
         title="Calendar / Schedule"
-        sub={r === 'admin' ? 'Production status against posting dates. Each line shows completed / scheduled tasks.' : 'Your tasks by posting date.'}
+        sub={r === 'admin' ? 'Completed / scheduled tasks for each posting day.' : 'Your tasks by posting date.'}
         actions={
           <div className="inline-flex items-center rounded-lg border bg-card p-0.5 shadow-(--shadow-card)">
             <button className="grid size-8 place-items-center rounded-md hover:bg-muted" aria-label="Previous month" onClick={() => move(-1)}>
