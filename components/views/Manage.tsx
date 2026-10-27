@@ -64,7 +64,7 @@ function FileBadge({ name, big }: { name: string; big?: boolean }) {
 }
 
 /** Image / video / PDF preview in a modal, with previous / next across the folder. */
-function PreviewDialog({ file, index, total, url, canDelete, onClose, onPrev, onNext, onDownload, onDelete }: { file: ManageFile; index: number; total: number; url?: string; canDelete: boolean; onClose: () => void; onPrev: () => void; onNext: () => void; onDownload: () => void; onDelete: () => void }) {
+function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDownload, onDelete }: { file: ManageFile; index: number; total: number; url?: string; onClose: () => void; onPrev: () => void; onNext: () => void; onDownload: () => void; onDelete: () => void }) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') onPrev();
@@ -88,11 +88,9 @@ function PreviewDialog({ file, index, total, url, canDelete, onClose, onPrev, on
           <Button variant="outline" size="lg" onClick={onDownload}>
             <Download /> Download
           </Button>
-          {canDelete ? (
-            <Button variant="destructive" size="lg" onClick={onDelete}>
-              <Trash2 /> Delete
-            </Button>
-          ) : null}
+          <Button variant="destructive" size="lg" onClick={onDelete}>
+            <Trash2 /> Delete
+          </Button>
           <Button variant="ghost" size="icon-lg" onClick={onClose} aria-label="Close preview">
             <X />
           </Button>
@@ -139,7 +137,7 @@ function PreviewDialog({ file, index, total, url, canDelete, onClose, onPrev, on
 }
 
 export function ManageView() {
-  const { isAdmin, confirmBox, toast } = useApp();
+  const { confirmBox, toast } = useApp();
   const [files, setFiles] = useState<ManageFile[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState('');
@@ -450,7 +448,7 @@ export function ManageView() {
     <>
       <PageHeader
         title="Files"
-        sub={isAdmin ? 'Browse, upload and download media. You can also delete files.' : 'Browse, upload and download media. Only the admin can delete.'}
+        sub="Browse, upload, download and delete media."
         eyebrow="Storage"
         actions={
           <button className="btn" onClick={() => void load()}>
@@ -526,11 +524,9 @@ export function ManageView() {
                 <button className="btn sm" onClick={() => void download([...sel])}>
                   <Download className="size-3.5" /> Download
                 </button>
-                {isAdmin && (
-                  <button className="btn sm danger" disabled={busy} onClick={() => void del()}>
-                    <Trash2 className="size-3.5" /> Delete
-                  </button>
-                )}
+                <button className="btn sm danger" disabled={busy} onClick={() => void del()}>
+                  <Trash2 className="size-3.5" /> Delete
+                </button>
                 <button className="btn sm ghost" style={{ color: 'inherit' }} onClick={() => setSel(new Set())}>
                   Clear selection
                 </button>
@@ -710,7 +706,6 @@ export function ManageView() {
           index={pvIdx}
           total={list.length}
           url={thumbs[pvFile.key]}
-          canDelete={isAdmin}
           onClose={() => setPv(null)}
           onPrev={() => step(-1)}
           onNext={() => step(1)}
