@@ -1,6 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
-import { CalendarCheck, FolderOpen, KeyRound, Layers, LineChart, ShieldCheck } from 'lucide-react';
+import { CalendarCheck, FolderOpen, KeyRound, LineChart, ShieldCheck } from 'lucide-react';
 import { ROLES, type Role } from '@/lib/constants';
 import { lsGet } from '@/lib/client/api';
 import { Button } from '@/components/ui/button';
@@ -15,12 +15,12 @@ const POINTS = [
   { icon: FolderOpen, title: 'Every asset in one place', text: 'Browse and upload to the shared media library.' },
 ];
 
+import { EpcMark } from '../EpcMark';
+
 function Brand({ light }: { light?: boolean }) {
   return (
     <div className="flex items-center gap-2.5">
-      <div className={`grid size-10 place-items-center rounded-xl shadow-sm ${light ? 'bg-white/15 text-white ring-1 ring-white/25' : 'bg-primary text-primary-foreground'}`}>
-        <Layers className="size-5" />
-      </div>
+      <EpcMark className="size-10" />
       <div className="leading-tight">
         <div className={`text-lg font-extrabold tracking-tight ${light ? 'text-white' : ''}`}>
           Endpoint <span className={light ? 'text-white/70' : 'text-primary'}>Clients</span>

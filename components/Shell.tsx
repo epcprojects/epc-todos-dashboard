@@ -88,17 +88,12 @@ function initials(name: string) {
   return ((p[0]?.[0] || '') + (p[1]?.[0] || '')).toUpperCase() || '·';
 }
 
+import { EpcMark } from './EpcMark';
+
 function BrandMark() {
   return (
     <div className="flex items-center gap-2.5 px-1.5 py-1">
-      <div className="grid size-9 shrink-0 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
-        {/* stacked tiers, echoing the Endpoint mark */}
-        <svg viewBox="0 0 24 24" className="size-5" fill="currentColor" aria-hidden="true">
-          <rect x="4" y="3.5" width="16" height="4.2" rx="2.1" />
-          <rect x="4" y="9.9" width="12" height="4.2" rx="2.1" opacity=".85" />
-          <rect x="4" y="16.3" width="16" height="4.2" rx="2.1" opacity=".7" />
-        </svg>
-      </div>
+      <EpcMark className="size-9" />
       <div className="min-w-0 leading-tight group-data-[collapsible=icon]:hidden">
         <div className="truncate text-[15px] font-extrabold tracking-tight">
           Endpoint <span className="text-primary">Clients</span>
