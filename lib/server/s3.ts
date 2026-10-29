@@ -1,4 +1,4 @@
-import { DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
+import { CopyObjectCommand, DeleteObjectsCommand, GetObjectCommand, ListObjectsV2Command, S3Client } from '@aws-sdk/client-s3';
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post';
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner';
 import { FOLDERS, MAX_FILE_BYTES, ROOT_PREFIX, parseFolderKey, parseKey, type ManageFile, type ManageSubfolder } from '@/lib/manage-config';
@@ -103,4 +103,17 @@ export async function deleteKeys(keys: string[]): Promise<{ deleted: number; fai
     for (const e of r.Errors || []) if (e.Key) failed.push(e.Key);
   }
   return { deleted, failed };
+}
+
+/** S3 has no rename: copy to the new key, then delete the old one. Returns null when the new name is already taken. */
+export async function renameObject(key: string, newName: string): Promise<string | null> {
+  const p = parseKey(key);
+  if (!p) throw new Error('BAD_KEY');
+  const target = `${ROOT_PREFIX}/${p.folder}/${p.path ? p.path + '/' : ''}${newName}`;
+  if (target === key) return key;
+  const taken = (await listFolder(p.folder, p.path)).some((f) => f.key !== key && f.name.toLowerCase() === newName.toLowerCase());
+  if (taken) return null;
+  await s3().send(new CopyObjectCommand({ Bucket: bucket(), Key: target, CopySource: `${bucket()}/${key.split('/').map(encodeURIComponent).join('/')}` }));
+  await s3().send(new DeleteObjectsCommand({ Bucket: bucket(), Delete: { Objects: [{ Key: key }], Quiet: true } }));
+  return target;
 }

@@ -1,5 +1,5 @@
 'use client';
-import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, LayoutGrid, List, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, LayoutGrid, List, Pencil, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, sanitizeName, type ManageFile, type ManageSubfolder } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
@@ -7,6 +7,7 @@ import { uploadToS3 } from '@/lib/client/s3upload';
 import { fmtDT } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { PlatformIcon } from '../PlatformIcon';
 import { useApp } from '../store';
 import { PageHeader } from '../ui';
@@ -65,7 +66,7 @@ function FileBadge({ name, big }: { name: string; big?: boolean }) {
 }
 
 /** Image / video / PDF preview in a modal, with previous / next across the folder. */
-function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDownload, onDelete }: { file: ManageFile; index: number; total: number; url?: string; onClose: () => void; onPrev: () => void; onNext: () => void; onDownload: () => void; onDelete: () => void }) {
+function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDownload, onRename, onDelete }: { file: ManageFile; index: number; total: number; url?: string; onClose: () => void; onPrev: () => void; onNext: () => void; onDownload: () => void; onRename: () => void; onDelete: () => void }) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
       if (e.key === 'ArrowLeft') onPrev();
@@ -88,6 +89,9 @@ function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDow
           </div>
           <Button variant="outline" size="lg" onClick={onDownload}>
             <Download /> Download
+          </Button>
+          <Button variant="outline" size="lg" onClick={onRename}>
+            <Pencil /> Rename
           </Button>
           <Button variant="destructive" size="lg" onClick={onDelete}>
             <Trash2 /> Delete
@@ -156,6 +160,7 @@ export function ManageView() {
   const [thumbs, setThumbs] = useState<Record<string, string>>({});
   const [busy, setBusy] = useState(false);
   const [pv, setPv] = useState<string | null>(null);
+  const [renaming, setRenaming] = useState<{ file: ManageFile; name: string; error: string; busy: boolean } | null>(null);
   const [clash, setClash] = useState<{ picked: File[]; names: string[] } | null>(null);
   const [clashMode, setClashMode] = useState<'replace' | 'keep'>('replace');
   const fileIn = useRef<HTMLInputElement>(null);
@@ -400,6 +405,23 @@ export function ManageView() {
     await load();
   };
 
+  const startRename = (file: ManageFile) => setRenaming({ file, name: file.name, error: '', busy: false });
+  const doRename = async () => {
+    if (!renaming) return;
+    const name = renaming.name.trim();
+    if (!name) return setRenaming({ ...renaming, error: 'Enter a file name.' });
+    if (name === renaming.file.name) return setRenaming(null);
+    setRenaming({ ...renaming, busy: true, error: '' });
+    try {
+      await api('/api/manage/rename', { body: { key: renaming.file.key, name } });
+      toast(`Renamed to ${name}`);
+      setRenaming(null);
+      await load();
+    } catch (e) {
+      setRenaming((r) => (r ? { ...r, busy: false, error: e instanceof Error ? e.message : 'Could not rename the file.' } : r));
+    }
+  };
+
   const download = async (keys: string[]) => {
     for (const k of keys) {
       const a = document.createElement('a');
@@ -582,9 +604,9 @@ export function ManageView() {
                         <input type="checkbox" aria-label="Select all files" checked={allSel} onChange={(e) => setSel(e.target.checked ? new Set(list.map((f) => f.key)) : new Set())} />
                       </th>
                       <th scope="col">Name</th>
-                      <th scope="col">Type</th>
-                      <th scope="col">Size</th>
-                      <th scope="col">Date modified</th>
+                      <th scope="col" className="max-sm:hidden">Type</th>
+                      <th scope="col" className="max-sm:hidden">Size</th>
+                      <th scope="col" className="max-sm:hidden">Date modified</th>
                       <th scope="col">
                         <span className="sr">Actions</span>
                       </th>
@@ -599,16 +621,27 @@ export function ManageView() {
                         <td>
                           <button className="mg-name text-left" onClick={() => setPv(f.key)} title="Preview">
                             <FileBadge name={f.name} />
-                            <span>{f.name}</span>
+                            <span className="min-w-0">
+                              <span className="block break-all">{f.name}</span>
+                              <span className="mt-0.5 hidden text-xs font-normal text-muted-foreground max-sm:block">
+                                {formatBytes(f.size)} · {new Date(f.lastModified).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                              </span>
+                            </span>
                           </button>
                         </td>
-                        <td>{extOf(f.name).toUpperCase() || 'File'}</td>
-                        <td className="num">{formatBytes(f.size)}</td>
-                        <td className="num">{fmtDT(f.lastModified)}</td>
+                        <td className="max-sm:hidden">{extOf(f.name).toUpperCase() || 'File'}</td>
+                        <td className="num max-sm:hidden">{formatBytes(f.size)}</td>
+                        <td className="num max-sm:hidden">{fmtDT(f.lastModified)}</td>
                         <td>
-                          <button className="btn sm" onClick={() => void download([f.key])}>
-                            Download
-                          </button>
+                          <div className="flex gap-1.5">
+                            <button className="btn sm" onClick={() => void download([f.key])} aria-label={`Download ${f.name}`} title="Download">
+                              <Download className="size-3.5 sm:hidden" />
+                              <span className="max-sm:hidden">Download</span>
+                            </button>
+                            <button className="btn sm" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
+                              <Pencil className="size-3.5" />
+                            </button>
+                          </div>
                         </td>
                       </tr>
                     ))}
@@ -641,9 +674,14 @@ export function ManageView() {
                           {formatBytes(f.size)} · {new Date(f.lastModified).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                       </div>
-                      <button className="btn sm" onClick={() => void download([f.key])}>
-                        Download
-                      </button>
+                      <div className="flex gap-1.5">
+                        <button className="btn sm flex-1" onClick={() => void download([f.key])}>
+                          Download
+                        </button>
+                        <button className="btn sm" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
+                          <Pencil className="size-3.5" />
+                        </button>
+                      </div>
                     </div>
                   );
                 })}
@@ -667,6 +705,47 @@ export function ManageView() {
           </>
         )}
       </section>
+
+      <Dialog open={!!renaming} onOpenChange={(o) => !o && !renaming?.busy && setRenaming(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle className="text-lg font-semibold">Rename file</DialogTitle>
+          <DialogDescription className="text-sm">Choose a new name. It stays in the same folder.</DialogDescription>
+          <form
+            className="grid gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void doRename();
+            }}
+          >
+            <Input
+              autoFocus
+              aria-label="New file name"
+              value={renaming?.name ?? ''}
+              maxLength={200}
+              onFocus={(e) => {
+                const n = e.currentTarget.value;
+                const dot = n.lastIndexOf('.');
+                e.currentTarget.setSelectionRange(0, dot > 0 ? dot : n.length);
+              }}
+              onChange={(e) => setRenaming((r) => (r ? { ...r, name: e.target.value, error: '' } : r))}
+              className="h-10 text-base"
+            />
+            {renaming?.error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {renaming.error}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="lg" disabled={renaming?.busy} onClick={() => setRenaming(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="lg" disabled={renaming?.busy}>
+                {renaming?.busy ? 'Renaming…' : 'Rename'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!clash} onOpenChange={(o) => !o && setClash(null)}>
         <DialogContent className="sm:max-w-md">
@@ -728,6 +807,10 @@ export function ManageView() {
           onPrev={() => step(-1)}
           onNext={() => step(1)}
           onDownload={() => void download([pvFile.key])}
+          onRename={() => {
+            setPv(null);
+            startRename(pvFile);
+          }}
           onDelete={() => {
             const k = pvFile.key;
             setPv(null);
