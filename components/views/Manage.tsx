@@ -498,7 +498,7 @@ export function ManageView() {
       />
       {err ? <div className="err" role="alert">{err}</div> : null}
       <section
-        className={`panel mg${over ? ' over' : ''}`}
+        className={`panel mg @container ${over ? 'over' : ''}`}
         onDragOver={(e) => {
           if (!folder) return;
           e.preventDefault();
@@ -604,9 +604,9 @@ export function ManageView() {
                         <input type="checkbox" aria-label="Select all files" checked={allSel} onChange={(e) => setSel(e.target.checked ? new Set(list.map((f) => f.key)) : new Set())} />
                       </th>
                       <th scope="col">Name</th>
-                      <th scope="col" className="max-sm:hidden">Type</th>
-                      <th scope="col" className="max-sm:hidden">Size</th>
-                      <th scope="col" className="max-sm:hidden">Date modified</th>
+                      <th scope="col" className="@max-3xl:hidden">Type</th>
+                      <th scope="col" className="@max-3xl:hidden">Size</th>
+                      <th scope="col" className="@max-3xl:hidden">Date modified</th>
                       <th scope="col">
                         <span className="sr">Actions</span>
                       </th>
@@ -623,20 +623,20 @@ export function ManageView() {
                             <FileBadge name={f.name} />
                             <span className="min-w-0">
                               <span className="block break-all">{f.name}</span>
-                              <span className="mt-0.5 hidden text-xs font-normal text-muted-foreground max-sm:block">
+                              <span className="mt-0.5 hidden text-xs font-normal text-muted-foreground @max-3xl:block">
                                 {formatBytes(f.size)} · {new Date(f.lastModified).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                               </span>
                             </span>
                           </button>
                         </td>
-                        <td className="max-sm:hidden">{extOf(f.name).toUpperCase() || 'File'}</td>
-                        <td className="num max-sm:hidden">{formatBytes(f.size)}</td>
-                        <td className="num max-sm:hidden">{fmtDT(f.lastModified)}</td>
+                        <td className="@max-3xl:hidden">{extOf(f.name).toUpperCase() || 'File'}</td>
+                        <td className="num @max-3xl:hidden">{formatBytes(f.size)}</td>
+                        <td className="num @max-3xl:hidden">{fmtDT(f.lastModified)}</td>
                         <td>
                           <div className="flex gap-1.5">
                             <button className="btn sm" onClick={() => void download([f.key])} aria-label={`Download ${f.name}`} title="Download">
-                              <Download className="size-3.5 sm:hidden" />
-                              <span className="max-sm:hidden">Download</span>
+                              <Download className="size-3.5 @3xl:hidden" />
+                              <span className="@max-3xl:hidden">Download</span>
                             </button>
                             <button className="btn sm" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
                               <Pencil className="size-3.5" />

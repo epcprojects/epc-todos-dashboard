@@ -486,7 +486,7 @@ svg.chart .vl { fill: var(--foreground); font-size: 12px; }
   .panel.mg { padding: 14px; }
   .mg-card .btn.sm { padding: 0 8px; }
 }
-@media (max-width: 640px) {
-  /* on a phone the pinned Status / Details columns would cover most of the table, so they scroll with it */
+@media (max-width: 1100px) {
+  /* on a phone or narrow window the pinned Status / Details columns would cover most of the table, so they scroll with it */
   table.t th.stk-act, table.t td.stk-act, table.t th.stk-st, table.t td.stk-st { position: static; box-shadow: none; }
 }
