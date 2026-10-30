@@ -14,7 +14,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table';
 import { useApp } from '../store';
-import { EmptyImport } from '../ui';
+import { EmptyImport, StatStrip } from '../ui';
 
 const TONE = {
   danger: 'bg-danger-soft text-danger',
@@ -277,6 +277,16 @@ export function Dashboard() {
     <>
       {header}
       <div className="grid gap-4">
+        {/* the four numbers to look at first */}
+        <StatStrip
+          items={[
+            { label: 'Overdue', value: od.length, sub: od.length ? 'Past the posting date' : 'Nothing is late', tone: od.length ? 'bad' : 'good', onClick: () => gotoTasks('overdue') },
+            { label: 'Due today', value: `${T.done}/${T.sch}`, sub: T.sch ? `${pctOf(T.done, T.sch)}% of today’s posts are ready` : 'Nothing is scheduled today', onClick: () => gotoReport('today') },
+            { label: 'This week', value: `${W.pct}%`, sub: `${W.done} of ${W.sch} posts ready`, onClick: () => gotoReport('week') },
+            { label: 'In progress', value: counts.in_progress, sub: `${counts.not_started} not started · ${counts.blocked} blocked`, onClick: () => gotoTasks('in_progress') },
+          ]}
+        />
+
         {/* health + attention */}
         <div className="grid gap-4 lg:grid-cols-12">
           <Card className="lg:col-span-7 [--card-spacing:--spacing(5)] gap-4">
@@ -299,9 +309,8 @@ export function Dashboard() {
                 ))}
               </div>
             </CardContent>
-            <div className="mt-auto grid grid-cols-3 divide-x border-t text-center">
+            <div className="mt-auto grid grid-cols-2 divide-x border-t text-center">
               {[
-                { l: 'This week', v: `${W.pct}%`, s: `${W.done} of ${W.sch} posts` },
                 { l: 'Finished today', v: String(doneToday), s: 'tasks completed' },
                 { l: 'Avg per day', v: (spark.slice(-7).reduce((a, b) => a + b, 0) / 7).toFixed(1), s: 'last 7 days' },
               ].map((x) => (

@@ -11,6 +11,7 @@ import { exportTasksFile } from '@/lib/client/export';
 import { lsSet } from '@/lib/client/api';
 import { useApp } from './store';
 import { EmptyImport, Flag, PlatPills, StatusSelect } from './ui';
+import { QItem } from './parts';
 
 const SYS_COLS: [string, string][] = [
   ['__team', 'Assigned Team'],
@@ -347,7 +348,7 @@ export function TaskTable({ tkey, team, admin, empty, founder }: Props) {
 
       {list.length ? (
         <>
-          <div className="tw">
+          <div className="tw max-sm:hidden">
             <table className="t">
               <thead>
                 <tr>
@@ -451,6 +452,12 @@ export function TaskTable({ tkey, team, admin, empty, founder }: Props) {
                 })}
               </tbody>
             </table>
+          </div>
+          {/* phones: the same compact task cards as the work queue instead of a wide table */}
+          <div className="qlist sm:hidden">
+            {slice.map((t) => (
+              <QItem key={t.id} t={t} today={today} />
+            ))}
           </div>
           <div className="pager">
             <div className="flex items-center gap-3 text-sm text-muted-foreground">
