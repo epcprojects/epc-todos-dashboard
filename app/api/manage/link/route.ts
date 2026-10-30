@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { TEAM_FOR_KIND, mediaKind, parseKey } from '@/lib/manage-config';
+import { TEAM_FOR_KIND, mediaKind, parseKey, platformOfPath } from '@/lib/manage-config';
 import { requireSession } from '@/lib/server/auth';
 import { setLink } from '@/lib/server/filelinks';
 import { ApiError, body, handle, json } from '@/lib/server/http';
@@ -17,6 +17,6 @@ export const POST = handle(async (req: Request) => {
   if (!p) throw new ApiError(400, 'Invalid request: bad file key');
   const kind = mediaKind(p.name);
   if (!kind) throw new ApiError(400, 'Tasks can only be attached to pictures and videos.');
-  await setLink(b.key, b.taskId, TEAM_FOR_KIND[kind], session.name);
+  await setLink(b.key, b.taskId, TEAM_FOR_KIND[kind], session.name, platformOfPath(p.path));
   return json({ ok: true });
 });

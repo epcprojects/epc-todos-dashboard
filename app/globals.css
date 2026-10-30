@@ -558,3 +558,5 @@ table.t td .mg-chip { max-width: 100%; }
 table.t th.mg-capcol { width: 38%; min-width: 220px; }
 .mg-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
 .mg-modified { font-size: 12.5px; color: var(--muted-foreground); text-align: right; white-space: nowrap; line-height: 1.35; }
+.tp-only { padding: 7px 12px; border-bottom: 1px solid var(--border); background: color-mix(in srgb, var(--primary), transparent 92%); color: var(--primary); font-weight: 600; font-size: 12.5px; }
+.dark .tp-only { color: color-mix(in srgb, var(--primary), #fff 25%); }

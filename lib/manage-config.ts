@@ -34,6 +34,15 @@ export function mediaKind(name: string): MediaKind | null {
   const e = extOf(name);
   return IMAGE_EXTENSIONS.includes(e) ? 'image' : VIDEO_EXTENSIONS.includes(e) ? 'video' : null;
 }
+/**
+ * The platform a folder stands for, as the lowercase word a task's platform contains ("linkedin", "tiktok" …):
+ * the first folder below Automation-Folder when it is one of the five platform folders, otherwise null
+ * (files in any other folder can be attached to a task of any platform).
+ */
+export function platformOfPath(path: string): string | null {
+  const first = (path.split('/')[0] || '').toLowerCase();
+  return FOLDERS.some((f) => f.key.toLowerCase() === first) ? first : null;
+}
 export const TEAM_FOR_KIND: Record<MediaKind, string> = { image: 'designer', video: 'editor' };
 
 /** The task attached to a file, with the pieces Content Manage shows (the caption is read from the task each time). */

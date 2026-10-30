@@ -1,7 +1,7 @@
 'use client';
 import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, Link2, List, Pencil, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, mediaKind, sanitizeName, type FileLink, type ManageFile, type MediaKind, type TaskOption } from '@/lib/manage-config';
+import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, mediaKind, platformOfPath, sanitizeName, type FileLink, type ManageFile, type MediaKind, type TaskOption } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
 import { STATUS, type Status } from '@/lib/constants';
@@ -963,7 +963,7 @@ export function ManageView() {
                       <FileBadge name={f.name} />
                       <span className="min-w-0 break-all">{f.name}</span>
                     </div>
-                    <TaskPicker kind={k} options={opts[k] ?? null} value={pend.attach[idx] ?? null} onChange={(id) => setPend((p) => (p ? { ...p, attach: { ...p.attach, [idx]: id } } : p))} />
+                    <TaskPicker kind={k} platform={platformOfPath(path)} platformLabel={platformOfPath(path) ? label(path.split('/')[0]) : undefined} options={opts[k] ?? null} value={pend.attach[idx] ?? null} onChange={(id) => setPend((p) => (p ? { ...p, attach: { ...p.attach, [idx]: id } } : p))} />
                   </div>
                 );
               })}
@@ -997,7 +997,7 @@ export function ManageView() {
               </>
             ) : null}
           </DialogDescription>
-          {attach ? <TaskPicker kind={attach.kind} options={opts[attach.kind] ?? null} value={attach.value} currentTitle={links[attach.file.key]?.title} onChange={(id) => setAttach((a) => (a ? { ...a, value: id, error: '' } : a))} /> : null}
+          {attach ? <TaskPicker kind={attach.kind} platform={platformOfPath(attach.file.path)} platformLabel={platformOfPath(attach.file.path) ? label(attach.file.path.split('/')[0]) : undefined} options={opts[attach.kind] ?? null} value={attach.value} currentTitle={links[attach.file.key]?.title} onChange={(id) => setAttach((a) => (a ? { ...a, value: id, error: '' } : a))} /> : null}
           {attach?.error ? (
             <p className="text-sm text-destructive" role="alert">
               {attach.error}

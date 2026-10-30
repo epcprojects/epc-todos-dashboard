@@ -37,15 +37,20 @@ export async function readLinks(): Promise<Record<string, FileLink>> {
 }
 
 /** Attaches (or, with taskId null, removes) the task of one file. The task must belong to the team the file kind needs. */
-export async function setLink(key: string, taskId: string | null, team: string, by: string) {
+export async function setLink(key: string, taskId: string | null, team: string, by: string, platform: string | null = null) {
   try {
     if (taskId === null) {
       await q(`DELETE FROM file_tasks WHERE s3_key = $1`, [key]);
       return;
     }
-    const t = (await q(`SELECT team FROM tasks WHERE id = $1`, [taskId])) as Row[];
+    const t = (await q(`SELECT team, platform FROM tasks WHERE id = $1`, [taskId])) as Row[];
     if (!t.length) throw new ApiError(404, 'That task no longer exists.');
     if (String(t[0].team) !== team) throw new ApiError(400, `That task belongs to another team. Pick a ${team === 'designer' ? 'Graphic Designer' : 'Video Editor'} task.`);
+    // a file in a platform folder (LinkedIn, TikTok …) only takes a task of that platform
+    if (platform && !String(t[0].platform ?? '').toLowerCase().includes(platform)) {
+      const name = { linkedin: 'LinkedIn', facebook: 'Facebook', instagram: 'Instagram', tiktok: 'TikTok', youtube: 'YouTube' }[platform] || platform;
+      throw new ApiError(400, `This file is in the ${name} folder, but that task is for ${String(t[0].platform || 'another platform')}. Pick a ${name} task.`);
+    }
     await q(
       `INSERT INTO file_tasks (s3_key, task_id, attached_by) VALUES ($1, $2, $3)
        ON CONFLICT (s3_key) DO UPDATE SET task_id = EXCLUDED.task_id, attached_by = EXCLUDED.attached_by, attached_at = now()`,

@@ -25,7 +25,7 @@ function haystack(o: TaskOption): string {
 }
 
 /** "Attach a task" dropdown with search. The list opens inline (not as a floating layer) so it works inside dialogs. */
-export function TaskPicker({ kind, value, onChange, options, id, currentTitle }: { kind: MediaKind; value: string | null; onChange: (id: string | null) => void; options: TaskOption[] | null; id?: string; currentTitle?: string }) {
+export function TaskPicker({ kind, value, onChange, options, id, currentTitle, platform, platformLabel }: { kind: MediaKind; value: string | null; onChange: (id: string | null) => void; options: TaskOption[] | null; id?: string; currentTitle?: string; platform?: string | null; platformLabel?: string }) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
   const cur = value && options ? options.find((o) => o.id === value) : null;
@@ -35,24 +35,26 @@ export function TaskPicker({ kind, value, onChange, options, id, currentTitle }:
     // a typed number ("2") must stand alone, so it does not match inside "2026" or "12"
     const has = (h: string, w: string) => (/^\d+$/.test(w) ? new RegExp(`(^|[^0-9])${w}([^0-9]|$)`).test(h) : h.includes(w));
     const l = (options || []).filter((o) => {
+      if (platform && !o.platform.toLowerCase().includes(platform)) return false; // a LinkedIn file only offers LinkedIn tasks
       const h = haystack(o);
       return words.every((w) => has(h, w));
     });
     return l.slice(0, 60);
-  }, [options, term]);
+  }, [options, term, platform]);
 
   return (
     <div className="tp">
       <button type="button" id={id} className="tp-btn" aria-expanded={open} onClick={() => setOpen((o) => !o)}>
-        <span className={cur || (value && currentTitle) ? 'tp-val' : 'tp-ph'}>{cur ? cur.title : value && currentTitle ? currentTitle : options === null ? 'Loading tasks…' : value ? 'Attached task' : `Attach a ${WHO[kind]} task (optional)`}</span>
+        <span className={cur || (value && currentTitle) ? 'tp-val' : 'tp-ph'}>{cur ? cur.title : value && currentTitle ? currentTitle : options === null ? 'Loading tasks…' : value ? 'Attached task' : `Attach a ${platformLabel ? platformLabel + ' ' : ''}${WHO[kind]} task (optional)`}</span>
         <ChevronDown className="size-4 shrink-0 text-muted-foreground" />
       </button>
       {open ? (
         <div className="tp-panel">
           <label className="tp-search">
             <Search className="size-4 text-muted-foreground" />
-            <input autoFocus placeholder="Search by title, platform or date…" value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search tasks" />
+            <input autoFocus placeholder={platform ? 'Search by title or date…' : 'Search by title, platform or date…'} value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search tasks" />
           </label>
+          {platform ? <div className="tp-note tp-only">Showing {platformLabel || platform} tasks only</div> : null}
           <ul className="tp-list" role="listbox" aria-label={`${WHO[kind]} tasks`}>
             <li>
               <button
@@ -69,7 +71,7 @@ export function TaskPicker({ kind, value, onChange, options, id, currentTitle }:
               </button>
             </li>
             {options === null ? <li className="tp-note">Loading…</li> : null}
-            {options && !shown.length ? <li className="tp-note">{options.length ? 'No task matches.' : `No unfinished ${WHO[kind]} tasks.`}</li> : null}
+            {options && !shown.length ? <li className="tp-note">{term.trim() ? 'No task matches.' : `No unfinished ${platformLabel ? platformLabel + ' ' : ''}${WHO[kind]} tasks.`}</li> : null}
             {shown.map((o) => (
               <li key={o.id}>
                 <button
