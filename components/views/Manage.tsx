@@ -242,7 +242,9 @@ function PreviewDialog({ file, index, total, url, link, onAttach, onClose, onPre
 }
 
 export function ManageView() {
-  const { confirmBox, toast } = useApp();
+  const { confirmBox, toast, role } = useApp();
+  // Designers only work with images and video editors only with video, so the library hides everything else for them.
+  const lockedKind: '' | MediaKind = role === 'designer' ? 'image' : role === 'editor' ? 'video' : '';
   const [files, setFiles] = useState<ManageFile[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState('');
@@ -318,7 +320,7 @@ export function ManageView() {
     return () => window.removeEventListener('beforeunload', h);
   }, [running]);
 
-  const inFolder = useMemo(() => files.filter((f) => f.path === path), [files, path]);
+  const inFolder = useMemo(() => files.filter((f) => f.path === path && (!lockedKind || mediaKind(f.name) === lockedKind)), [files, path, lockedKind]);
   // folders directly below the current location: from file paths and from folder markers (empty folders); the five standard folders always show at the top
   const children = useMemo(() => {
     const base = path ? path + '/' : '';
@@ -680,7 +682,7 @@ export function ManageView() {
               <button className="btn" onClick={() => setDesc((d) => !d)} aria-label="Reverse sort order" title="Reverse sort order">
                 {sort === 'name' ? (desc ? 'Z → A' : 'A → Z') : sort === 'size' ? (desc ? 'Largest first' : 'Smallest first') : desc ? 'Newest first' : 'Oldest first'}
               </button>
-              <div className="row" role="group" aria-label="Show only">
+              {!lockedKind && <div className="row" role="group" aria-label="Show only">
                 {(
                   [
                     ['', 'All'],
@@ -692,7 +694,7 @@ export function ManageView() {
                     {text}
                   </button>
                 ))}
-              </div>
+              </div>}
               <div className="row" role="group" aria-label="View">
                 <button className={`btn ${view === 'list' ? 'primary' : ''}`} aria-pressed={view === 'list'} onClick={() => changeView('list')}>
                   <List className="size-4" /> List

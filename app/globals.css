@@ -736,3 +736,10 @@ h1, h2, h3, .font-heading { letter-spacing: -0.02em; font-weight: 700; }
 .drop.compact { padding: 18px 22px; flex-direction: row; flex-wrap: wrap; justify-content: center; text-align: left; gap: 8px 18px; }
 .drop.compact > .grid { width: 44px; height: 44px; }
 .drop.compact h2 { margin: 0; }
+
+/* founder tasks are pinned above the regular queue with the signal colour on their edge */
+.founder-pin h3 { display: flex; align-items: center; gap: 8px; color: var(--attention-ink); }
+.founder-pin .qlist > * { border-left: 4px solid var(--attention); }
+
+/* tables: small mono caps headers, as in the Runway design */
+table.t th, table.cmp th { font-family: var(--font-mono-ui), ui-monospace, monospace; font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }

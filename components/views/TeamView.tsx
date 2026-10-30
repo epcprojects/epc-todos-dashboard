@@ -17,7 +17,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
   const founderList = mine.filter((t) => t.founder);
   const fm = !!teamFounder[team]; // Founder content view: everything on the page is limited to founder content
   const list = fm ? founderList : mine.filter((t) => !t.founder);
-  const title = team === 'designer' ? 'Graphic Design Tasks' : team === 'editor' ? 'Video Editing Tasks' : `${TEAMS[team] || 'Team'} Tasks`;
+  const title = team === 'designer' ? 'Design queue' : team === 'editor' ? 'Video queue' : `${TEAMS[team] || 'Team'} queue`;
   const key = 'team-' + team + (fm ? '-founder' : '');
   const empty = (
     <div className="empty">
@@ -51,7 +51,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
           </button>
         ) : null
       }
-      eyebrow="Endpoint Clients"
+      eyebrow="Work"
     />
   );
   if (!mine.length && !admin)
@@ -121,7 +121,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
             <p className="muted">{admin ? 'Tick “Founder content” for a sheet on the Assign step of Content Import and it will show up here.' : 'Founder content assigned to you will show up here.'}</p>
           </div>
         ) : tab === 'queue' ? (
-          <Queue team={fm ? team + '-founder' : team} list={list} today={today} qExpand={qExpand} setQExpand={setQExpand} />
+          <Queue team={fm ? team + '-founder' : team} list={list} pinned={fm ? [] : founderList.filter((t) => t.status !== 'completed')} today={today} qExpand={qExpand} setQExpand={setQExpand} />
         ) : (
           <TaskTable tkey={key} team={team as Team} admin={admin} empty={empty} founder={fm} />
         )}
@@ -130,7 +130,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
   );
 }
 
-function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list: ReturnType<typeof useApp>['act']; today: string; qExpand: Record<string, boolean>; setQExpand: (k: string) => void }) {
+function Queue({ team, list, pinned, today, qExpand, setQExpand }: { team: string; list: ReturnType<typeof useApp>['act']; pinned: ReturnType<typeof useApp>['act']; today: string; qExpand: Record<string, boolean>; setQExpand: (k: string) => void }) {
   const [fq, setFq] = useState({ q: '', status: '', platform: '', pillar: '', type: '' });
   const set = (k: keyof typeof fq, v: string) => setFq((x) => ({ ...x, [k]: v }));
   const [showDone, setShowDone] = useState(false);
@@ -218,6 +218,19 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
           </button>
         ) : null}
       </div>
+      {pinned.length && !filtered ? (
+        <section className="sec founder-pin">
+          <h3>
+            <Crown className="size-4" /> Founder content <span className="pill fl-today num">{pinned.length}</span>
+          </h3>
+          <div className="qlist">{pinned.slice().sort(cmp).slice(0, qExpand[team + 'pin'] ? pinned.length : 4).map((t) => <QItem key={t.id} t={t} today={today} />)}</div>
+          {pinned.length > 4 && !qExpand[team + 'pin'] ? (
+            <button className="btn sm mt-2" onClick={() => setQExpand(team + 'pin')}>
+              Show all {pinned.length}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
       {filtered && !open.length && !doneList.length ? <p className="muted">No tasks match these filters.</p> : null}
       {secs.map(([label, k, fn]) => {
         const l = open.filter(fn).sort(cmp);
