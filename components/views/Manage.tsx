@@ -225,7 +225,8 @@ export function ManageView() {
   const [view, setView] = useState<'list' | 'grid'>('list');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<SortKey>('name');
-  const [desc, setDesc] = useState(false);
+  const [desc, setDesc] = useState(true); // names start Z → A
+  const [only, setOnly] = useState<'' | MediaKind>('');
   const [sel, setSel] = useState<Set<string>>(new Set());
   const [shown, setShown] = useState(PAGE);
   const [uploads, setUploads] = useState<UploadItem[]>([]);
@@ -320,14 +321,14 @@ export function ManageView() {
   }, [files, subfolders, path]);
   const list = useMemo(() => {
     const term = q.trim().toLowerCase();
-    const l = term ? inFolder.filter((f) => f.name.toLowerCase().includes(term)) : [...inFolder];
+    const l = inFolder.filter((f) => (!term || f.name.toLowerCase().includes(term)) && (!only || mediaKind(f.name) === only));
     const dir = desc ? -1 : 1;
     l.sort((a, b) => {
       const c = sort === 'size' ? a.size - b.size : sort === 'date' ? a.lastModified.localeCompare(b.lastModified) : a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
       return c * dir || a.name.localeCompare(b.name);
     });
     return l;
-  }, [inFolder, q, sort, desc]);
+  }, [inFolder, q, sort, desc, only]);
   const visible = list.slice(0, shown);
 
   // preview modal: current file plus its neighbours get signed view links
@@ -650,6 +651,19 @@ export function ManageView() {
               <button className="btn" onClick={() => setDesc((d) => !d)} aria-label="Reverse sort order" title="Reverse sort order">
                 {sort === 'name' ? (desc ? 'Z → A' : 'A → Z') : sort === 'size' ? (desc ? 'Largest first' : 'Smallest first') : desc ? 'Newest first' : 'Oldest first'}
               </button>
+              <div className="row" role="group" aria-label="Show only">
+                {(
+                  [
+                    ['', 'All'],
+                    ['image', 'Images'],
+                    ['video', 'Videos'],
+                  ] as const
+                ).map(([v, text]) => (
+                  <button key={v || 'all'} className={`btn ${only === v ? 'primary' : ''}`} aria-pressed={only === v} onClick={() => { setOnly(v); setShown(PAGE); }}>
+                    {text}
+                  </button>
+                ))}
+              </div>
               <div className="row" role="group" aria-label="View">
                 <button className={`btn ${view === 'list' ? 'primary' : ''}`} aria-pressed={view === 'list'} onClick={() => changeView('list')}>
                   <List className="size-4" /> List
@@ -700,8 +714,8 @@ export function ManageView() {
             {!list.length ? (
               children.length > 0 && !q ? null : (
               <div className="empty">
-                <h2>{inFolder.length ? 'No files match your search.' : 'No files in this folder.'}</h2>
-                <p className="muted">{inFolder.length ? 'Try a different search.' : 'Upload files with the button above, drag them onto this page, or create a folder.'}</p>
+                <h2>{inFolder.length ? (only && !q ? `No ${only === 'image' ? 'images' : 'videos'} in this folder.` : 'No files match your search.') : 'No files in this folder.'}</h2>
+                <p className="muted">{inFolder.length ? (only ? 'Choose “All” to see every file.' : 'Try a different search.') : 'Upload files with the button above, drag them onto this page, or create a folder.'}</p>
               </div>
               )
             ) : view === 'list' ? (

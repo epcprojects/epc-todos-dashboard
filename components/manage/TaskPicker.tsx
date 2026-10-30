@@ -6,14 +6,38 @@ import { fmtDate } from '@/lib/dates';
 
 const WHO: Record<MediaKind, string> = { image: 'Graphic Designer', video: 'Video Editor' };
 
+const MONTHS = ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'];
+const DAYS = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
+
+/** Everything a task can be found by: title, platform and its posting date written the ways people type it
+ *  ("2026-11-02", "2 nov", "nov 2", "2 november", "02/11", "monday"). */
+function haystack(o: TaskOption): string {
+  const parts = [o.title, o.platform, o.founder ? 'founder' : ''];
+  if (o.postDate) {
+    const [y, m, d] = o.postDate.split('-').map(Number);
+    const month = MONTHS[m - 1] || '';
+    const day = DAYS[new Date(Date.UTC(y, m - 1, d)).getUTCDay()];
+    const dd = String(d).padStart(2, '0');
+    const mm = String(m).padStart(2, '0');
+    parts.push(o.postDate, `${d} ${month.slice(0, 3)}`, `${month.slice(0, 3)} ${d}`, `${d} ${month}`, `${month} ${d}`, `${dd} ${month.slice(0, 3)}`, `${month.slice(0, 3)} ${dd}`, `${d}/${m}`, `${dd}/${mm}`, `${d}-${m}`, `${dd}-${mm}`, `${mm}-${dd}`, `${dd}.${mm}`, String(y), day, day.slice(0, 3));
+  }
+  return parts.join(' | ').toLowerCase();
+}
+
 /** "Attach a task" dropdown with search. The list opens inline (not as a floating layer) so it works inside dialogs. */
 export function TaskPicker({ kind, value, onChange, options, id, currentTitle }: { kind: MediaKind; value: string | null; onChange: (id: string | null) => void; options: TaskOption[] | null; id?: string; currentTitle?: string }) {
   const [open, setOpen] = useState(false);
   const [term, setTerm] = useState('');
   const cur = value && options ? options.find((o) => o.id === value) : null;
   const shown = useMemo(() => {
-    const t = term.trim().toLowerCase();
-    const l = (options || []).filter((o) => !t || o.title.toLowerCase().includes(t) || o.platform.toLowerCase().includes(t));
+    // every word typed must match somewhere (so "linkedin 2 nov" narrows by platform and date)
+    const words = term.trim().toLowerCase().split(/\s+/).filter(Boolean);
+    // a typed number ("2") must stand alone, so it does not match inside "2026" or "12"
+    const has = (h: string, w: string) => (/^\d+$/.test(w) ? new RegExp(`(^|[^0-9])${w}([^0-9]|$)`).test(h) : h.includes(w));
+    const l = (options || []).filter((o) => {
+      const h = haystack(o);
+      return words.every((w) => has(h, w));
+    });
     return l.slice(0, 60);
   }, [options, term]);
 
@@ -27,7 +51,7 @@ export function TaskPicker({ kind, value, onChange, options, id, currentTitle }:
         <div className="tp-panel">
           <label className="tp-search">
             <Search className="size-4 text-muted-foreground" />
-            <input autoFocus placeholder="Search by title or platform…" value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search tasks" />
+            <input autoFocus placeholder="Search by title, platform or date…" value={term} onChange={(e) => setTerm(e.target.value)} aria-label="Search tasks" />
           </label>
           <ul className="tp-list" role="listbox" aria-label={`${WHO[kind]} tasks`}>
             <li>
