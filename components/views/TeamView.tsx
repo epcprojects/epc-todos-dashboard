@@ -134,6 +134,7 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
   const [fq, setFq] = useState({ q: '', status: '', platform: '', pillar: '', type: '' });
   const set = (k: keyof typeof fq, v: string) => setFq((x) => ({ ...x, [k]: v }));
   const [showDone, setShowDone] = useState(false);
+  const [fOpen, setFOpen] = useState(false);
   const openAll = list.filter((t) => t.status !== 'completed');
   const all = showDone ? list : openAll;
   const uniq = (get: (t: (typeof list)[number]) => string[]) => [...new Set(all.flatMap(get).filter(Boolean))].sort((a, b) => a.localeCompare(b));
@@ -187,8 +188,8 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
   );
   return (
     <div className="queue">
-      <div className="filters mb-5" role="search" aria-label="Filter the work queue">
-        <label className="field relative">
+      <div className={`filters mb-5${fOpen ? ' open' : ''}`} role="search" aria-label="Filter the work queue">
+        <label className="field fsearch relative">
           <span>Search</span>
           <Search className="pointer-events-none absolute bottom-2.5 left-3 size-4 text-muted-foreground" />
           <input className="inp !pl-9" type="search" value={fq.q} placeholder="Search tasks…" onChange={(e) => set('q', e.target.value)} />
@@ -207,9 +208,12 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
         {sel('Platform', 'platform', 'All platforms', plats)}
         {sel('Content pillar', 'pillar', 'All pillars', pillars)}
         {sel('Type', 'type', 'All types', types)}
+        <button type="button" className="btn f-toggle" aria-expanded={fOpen} onClick={() => setFOpen((o) => !o)}>
+          {fOpen ? 'Hide filters' : `Filters${filtered ? ' (on)' : ''}`}
+        </button>
         {showDoneBox}
         {filtered ? (
-          <button className="btn" onClick={() => setFq({ q: '', status: '', platform: '', pillar: '', type: '' })}>
+          <button className="btn clear" onClick={() => setFq({ q: '', status: '', platform: '', pillar: '', type: '' })}>
             <X className="size-4" /> Clear filters
           </button>
         ) : null}
@@ -217,7 +221,7 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
       {filtered && !open.length && !doneList.length ? <p className="muted">No tasks match these filters.</p> : null}
       {secs.map(([label, k, fn]) => {
         const l = open.filter(fn).sort(cmp);
-        if (!l.length && (k === 'nodate' || filtered)) return null;
+        if (!l.length) return null;
         const ek = team + k;
         const lim = qExpand[ek] ? l.length : 12;
         return (

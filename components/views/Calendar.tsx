@@ -81,7 +81,7 @@ export function CalendarView() {
   return (
     <>
       <PageHeader
-        title="Calendar / Schedule"
+        title="Calendar"
         sub={r === 'admin' ? 'Completed / scheduled tasks for each posting day.' : 'Your tasks by posting date.'}
         actions={
           <div className="inline-flex items-center rounded-lg border bg-card p-0.5 shadow-(--shadow-card)">

@@ -120,7 +120,7 @@ export function ImportsView() {
   return (
     <>
       <PageHeader
-        title="Imports"
+        title="Import history"
         sub="Every workbook you have imported."
         actions={
           <button className="btn primary" onClick={() => nav('import')}>

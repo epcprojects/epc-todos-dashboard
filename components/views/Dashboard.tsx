@@ -246,7 +246,7 @@ export function Dashboard() {
   const blk = counts.blocked;
   if (blk) att.push({ icon: OctagonAlert, tone: 'danger', title: `${plural(blk, 'blocked task')}`, detail: 'Waiting on something', go: () => gotoTasks('blocked') });
   const short = coverTeams.filter((x) => !x.c.none && x.c.days < tgt);
-  if (short.length) att.push({ icon: TrendingUp, tone: short.some((x) => x.c.days < Math.ceil(tgt / 2)) ? 'danger' : 'warn', title: 'Content buffer below target', detail: short.map((x) => `${x.label} ${x.c.days}d`).join(' · ') + ` (target ${tgt}d)`, go: () => nav('reports') });
+  if (short.length) att.push({ icon: TrendingUp, tone: short.some((x) => x.c.days < Math.ceil(tgt / 2)) ? 'danger' : 'warn', title: 'Ready content is below target', detail: short.map((x) => `${x.label} ${x.c.days}d`).join(' · ') + ` (target ${tgt}d)`, go: () => nav('reports') });
   const tdy = act.filter((t) => t.postDate === today && t.status !== 'completed').length;
   if (tdy) att.push({ icon: CalendarClock, tone: 'warn', title: `${plural(tdy, 'task')} still open today`, detail: 'Scheduled to post today', go: () => gotoTasks('today') });
   const tm = act.filter((t) => t.postDate === addDays(today, 1) && t.status !== 'completed').length;
@@ -261,7 +261,7 @@ export function Dashboard() {
     ahead: { icon: ShieldCheck, tone: 'ok' as Tone, line: 'Content is ready ahead of the calendar.' },
     ontrack: { icon: ShieldCheck, tone: 'ok' as Tone, line: 'Exactly on target.' },
     risk: { icon: ShieldAlert, tone: 'warn' as Tone, line: `${plural(Math.max(0, H.gap), 'day')} short of the target buffer.` },
-    behind: { icon: ShieldAlert, tone: 'danger' as Tone, line: `${plural(H.od, 'task')} past their posting date ${H.od === 1 ? 'is' : 'are'} still unfinished.` },
+    behind: { icon: ShieldAlert, tone: 'danger' as Tone, line: `${plural(H.od, 'task')} ${H.od === 1 ? 'is' : 'are'} past the posting date and not finished.` },
     none: { icon: Shield, tone: 'neutral' as Tone, line: 'No upcoming scheduled content.' },
   }[H.k];
 
@@ -344,70 +344,6 @@ export function Dashboard() {
             </CardContent>
           </Card>
         </div>
-
-        {/* KPI strip: one connected card, four numbers that matter */}
-        <Card className="gap-0 py-0">
-          <div className="grid sm:grid-cols-2 xl:grid-cols-4 [&>*]:border-b xl:[&>*]:border-b-0 sm:[&>*:nth-child(odd)]:border-r xl:[&>*:not(:last-child)]:border-r [&>*:last-child]:border-b-0 sm:[&>*:nth-last-child(2)]:border-b-0 xl:[&>*:nth-last-child(2)]:border-r">
-            <button onClick={() => gotoTasks('')} className="group flex flex-col gap-3 p-5 text-left transition-colors hover:bg-muted/40">
-              <div className="flex items-center justify-between text-[13px] font-medium text-muted-foreground">
-                <span className="flex items-center gap-2"><ListTodo className="size-4" /> Active tasks</span>
-                <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
-              </div>
-              <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">{act.length}</div>
-              <div>
-                <div className="flex h-1.5 w-full overflow-hidden rounded-full bg-muted">
-                  {seg.map((s) => (
-                    <div key={s.l} className={s.c} style={{ width: `${pctOf(s.n, act.length)}%` }} title={`${s.l}: ${s.n}`} />
-                  ))}
-                </div>
-                <div className="mt-2 flex flex-wrap gap-x-3 gap-y-0.5 text-[13px] text-muted-foreground">
-                  <span>{counts.not_started} not started</span>
-                  <span>{counts.in_progress} in progress</span>
-                </div>
-              </div>
-            </button>
-            <button onClick={() => gotoTasks('completed')} className="group flex flex-col gap-3 p-5 text-left transition-colors hover:bg-muted/40">
-              <div className="flex items-center justify-between text-[13px] font-medium text-muted-foreground">
-                <span className="flex items-center gap-2"><CheckCircle2 className="size-4" /> Completed</span>
-                <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
-              </div>
-              <div className="flex items-end justify-between gap-3">
-                <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">
-                  {counts.completed} <span className="text-base font-medium text-muted-foreground">{pctOf(counts.completed, act.length)}%</span>
-                </div>
-                <Sparkline values={spark} />
-              </div>
-              <div className="text-[13px] text-muted-foreground">
-                <span className="font-medium text-foreground">{doneToday}</span> finished today · last 14 days
-              </div>
-            </button>
-            <button onClick={() => gotoTasks('overdue')} className="group flex flex-col gap-3 p-5 text-left transition-colors hover:bg-muted/40">
-              <div className="flex items-center justify-between text-[13px] font-medium text-muted-foreground">
-                <span className="flex items-center gap-2"><AlertCircle className={`size-4 ${od.length ? 'text-danger' : ''}`} /> Overdue</span>
-                <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
-              </div>
-              <div className={`font-heading text-3xl font-semibold tracking-tight tabular-nums ${od.length ? 'text-danger' : ''}`}>{od.length}</div>
-              <div className="text-[13px] text-muted-foreground">
-                {od.length ? [...new Set(od.map((t) => t.team))].map((k) => `${TEAMS[k] || k} ${od.filter((t) => t.team === k).length}`).join(' · ') : 'Nothing past its posting date'}
-              </div>
-            </button>
-            <button onClick={() => gotoReport('today')} className="group flex flex-col gap-3 p-5 text-left transition-colors hover:bg-muted/40">
-              <div className="flex items-center justify-between text-[13px] font-medium text-muted-foreground">
-                <span className="flex items-center gap-2"><CalendarCheck className="size-4" /> Today</span>
-                <ArrowUpRight className="size-4 opacity-0 transition-opacity group-hover:opacity-100" />
-              </div>
-              <div className="font-heading text-3xl font-semibold tracking-tight tabular-nums">
-                {T.done}<span className="text-xl font-medium text-muted-foreground"> / {T.sch}</span>
-              </div>
-              <div>
-                <Bar pct={T.pct} tone="ok" />
-                <div className="mt-2 text-[13px] text-muted-foreground">
-                  {T.pct}% of today’s posts ready · week {W.pct}% ({W.done}/{W.sch})
-                </div>
-              </div>
-            </button>
-          </div>
-        </Card>
 
         {/* today + upcoming */}
         <div className="grid gap-4 lg:grid-cols-2">
@@ -517,7 +453,7 @@ export function Dashboard() {
             <CardContent>
               {activity.length ? (
                 <ol className="relative grid gap-4 before:absolute before:top-2 before:bottom-2 before:left-[15px] before:w-px before:bg-border">
-                  {activity.slice(0, 8).map((h, i) => {
+                  {activity.slice(0, 6).map((h, i) => {
                     const t = h.taskId ? taskById(h.taskId) : undefined;
                     const title = t ? displayTitle(t) : h.title || 'Task';
                     const a = activityIcon(h.msg);
@@ -525,7 +461,7 @@ export function Dashboard() {
                       <li key={i} className="relative flex gap-3">
                         <IconTile icon={a.icon} tone={a.tone} className="relative z-10 size-8 ring-4 ring-card" />
                         <div className="min-w-0 flex-1 pt-0.5">
-                          <p className="text-sm leading-snug">
+                          <p className="text-sm leading-snug [overflow-wrap:anywhere]">
                             <span className="font-medium">{h.name || 'Someone'}</span> <span className="text-muted-foreground">· {h.msg}</span>
                           </p>
                           <div className="mt-0.5 flex items-center gap-2 text-[13px] text-muted-foreground">

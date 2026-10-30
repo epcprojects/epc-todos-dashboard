@@ -45,24 +45,24 @@ function useNavGroups(): NavGroup[] {
       {
         label: 'Production',
         items: [
-          { key: 'import', label: 'Content Import', icon: FileUp },
-          { key: 'distribution', label: 'Task Distribution', icon: ListChecks, badge: { n: act.length } },
-          { key: 'designer', label: 'Designer', icon: PenTool, badge: { n: open('designer') } },
-          { key: 'editor', label: 'Video Editor', icon: Clapperboard, badge: { n: open('editor') } },
+          { key: 'import', label: 'Import Content', icon: FileUp },
+          { key: 'distribution', label: 'All Tasks', icon: ListChecks, badge: { n: act.length } },
+          { key: 'designer', label: 'Graphic Design', icon: PenTool, badge: { n: open('designer') } },
+          { key: 'editor', label: 'Video Editing', icon: Clapperboard, badge: { n: open('editor') } },
           ...customRoles.map((c): NavItem => ({ key: 'team:' + c.key, label: c.name, icon: Users, badge: { n: open(c.key) } })),
         ],
       },
       {
         label: 'Planning',
         items: [
-          { key: 'calendar', label: 'Calendar / Schedule', icon: CalendarDays },
+          { key: 'calendar', label: 'Calendar', icon: CalendarDays },
           { key: 'reports', label: 'Reports', icon: BarChart3 },
         ],
       },
       {
         label: 'Workspace',
         items: [
-          { key: 'imports', label: 'Imports', icon: History, badge: { n: imports.length } },
+          { key: 'imports', label: 'Import History', icon: History, badge: { n: imports.length } },
           { key: 'manage', label: 'Content Manage', icon: FolderOpen },
           { key: 'settings', label: 'Settings', icon: Settings },
         ],

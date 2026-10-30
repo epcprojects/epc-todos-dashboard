@@ -165,10 +165,7 @@ export interface StatItem {
 /** One connected card of numbers (instead of a grid of separate boxes). */
 export function StatStrip({ items }: { items: StatItem[] }) {
   return (
-    <div
-      className="grid overflow-hidden rounded-xl border bg-card shadow-(--shadow-card)"
-      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(170px, 1fr))' }}
-    >
+    <div className="statstrip overflow-hidden rounded-xl border bg-card shadow-(--shadow-card)">
       {items.map((it, i) => {
         const inner = (
           <>

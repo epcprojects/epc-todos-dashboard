@@ -57,7 +57,7 @@ export function ImportPage() {
 
   return (
     <>
-      <PageHeader title="Content import" sub="Upload your content calendar. Nothing is saved until you confirm." eyebrow="Admin" />
+      <PageHeader title="Import content" sub="Upload your content calendar. Nothing is saved until you confirm." eyebrow="Admin" />
       <div
         className={`drop${over ? ' over' : ''}`}
         id="drop"

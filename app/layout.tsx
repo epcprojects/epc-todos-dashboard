@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Manrope } from 'next/font/google';
+import { Manrope } from 'next/font/google';
 import { ThemeProvider } from 'next-themes';
 import { TooltipProvider } from '@/components/ui/tooltip';
 import './globals.css';
@@ -10,8 +10,6 @@ const manrope = Manrope({
   display: 'swap',
   variable: '--font-manrope',
 });
-
-const inter = Inter({ subsets: ['latin'], display: 'swap', variable: '--font-inter' });
 
 export const metadata: Metadata = {
   title: 'Social Media Production Dashboard',
@@ -27,7 +25,7 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en" className={`${manrope.variable} ${inter.variable}`} suppressHydrationWarning>
+    <html lang="en" className={manrope.variable} suppressHydrationWarning>
       <body className="font-sans antialiased">
         <ThemeProvider attribute="class" defaultTheme="system" enableSystem disableTransitionOnChange>
           <TooltipProvider delay={200}>{children}</TooltipProvider>
