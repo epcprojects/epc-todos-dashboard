@@ -681,3 +681,5 @@ table.t th.mg-capcol { width: 38%; min-width: 220px; }
 }
 /* hidden (screen-reader) labels inside scrolling tables must be clipped by the table, not stretch the page */
 .tw { position: relative; }
+/* charts: a little narrower on phones so most of a week fits before scrolling */
+@media (max-width: 640px) { svg.chart { min-width: 620px; } }

@@ -156,12 +156,16 @@ export function ImportsView() {
                     </div>
                   </div>
                   <div className="row">
-                    <button className="btn sm" onClick={() => void archive(imp.id)}>
-                      <Archive className="size-3.5" /> Archive tasks
-                    </button>
-                    <button className="btn sm" onClick={() => void restore(imp.id)}>
-                      <ArchiveRestore className="size-3.5" /> Restore
-                    </button>
+                    {live.length > arch ? (
+                      <button className="btn sm" onClick={() => void archive(imp.id)}>
+                        <Archive className="size-3.5" /> Archive tasks
+                      </button>
+                    ) : null}
+                    {arch ? (
+                      <button className="btn sm" onClick={() => void restore(imp.id)}>
+                        <ArchiveRestore className="size-3.5" /> Restore {arch === live.length ? '' : `${arch} archived`}
+                      </button>
+                    ) : null}
                     <button className="btn sm danger" onClick={() => void remove(imp.id)}>
                       <Trash2 className="size-3.5" /> Delete import
                     </button>

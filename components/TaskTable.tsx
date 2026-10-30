@@ -144,14 +144,35 @@ export function TaskTable({ tkey, team, admin, empty, founder }: Props) {
   const page = Math.min(st.page, pages);
   const slice = list.slice((page - 1) * st.size, page * st.size);
 
-  const heads = useMemo(() => headersOf(base.filter((t) => !t.archived || st.f.arch !== 'active')), [base, st.f.arch]);
+  // Columns: the title leads, then platform, date, type and pillar, then the rest in the Excel order.
+  const heads = useMemo(() => {
+    const all = headersOf(base.filter((t) => !t.archived || st.f.arch !== 'active'));
+    const rank = new Map<string, number>();
+    for (const t of base.slice(0, 200)) {
+      (['title', 'platform', 'date', 'type', 'pillar'] as const).forEach((k, n) => {
+        const i = (t.m as unknown as Record<string, number | undefined>)[k];
+        if (i != null && t.h[i] != null && !rank.has(t.h[i])) rank.set(t.h[i], n);
+      });
+    }
+    return all.map((h, i) => ({ h, i })).sort((a, b) => (rank.get(a.h) ?? 9) - (rank.get(b.h) ?? 9) || a.i - b.i).map((x) => x.h);
+  }, [base, st.f.arch]);
+  // Until the person has picked columns themselves, long free-text columns (directions, captions, notes, links) start hidden.
+  const LONG_TEXT = /direction|caption|social copy|notes?\b|brief|description|reference|link|competitor/i;
+  const saved = useMemo(() => {
+    try {
+      return localStorage.getItem('epc.cols.' + tkey) !== null;
+    } catch {
+      return true;
+    }
+  }, [tkey, st.hidden]);
+  const autoHide = (h: string) => !saved && LONG_TEXT.test(h);
   const defaultSys = admin ? ['__team', '__sched'] : ['__sched'];
   const sysOn = (k: string) => st.hidden.includes('+' + k) || (defaultSys.includes(k) && !st.hidden.includes(k));
   const cols = [
-    ...heads.filter((h) => !st.hidden.includes('c:' + h)).map((h) => ({ k: 'c:' + h, h, sys: false })),
+    ...heads.filter((h) => !st.hidden.includes('c:' + h) && !autoHide(h)).map((h) => ({ k: 'c:' + h, h, sys: false })),
     ...SYS_COLS.filter(([k]) => sysOn(k)).map(([k, h]) => ({ k, h, sys: true })),
   ];
-  const allCols = [...heads.map((h) => ({ k: 'c:' + h, h, sys: false, on: !st.hidden.includes('c:' + h) })), ...SYS_COLS.map(([k, h]) => ({ k, h, sys: true, on: sysOn(k) }))];
+  const allCols = [...heads.map((h) => ({ k: 'c:' + h, h, sys: false, on: !st.hidden.includes('c:' + h) && !autoHide(h) })), ...SYS_COLS.map(([k, h]) => ({ k, h, sys: true, on: sysOn(k) }))];
 
   const set = (fn: (s: typeof st) => void) => updTable(tkey, fn);
   const setF = (k: keyof typeof f, v: string) =>
@@ -162,6 +183,8 @@ export function TaskTable({ tkey, team, admin, empty, founder }: Props) {
 
   const toggleCol = (c: string, sys: boolean, checked: boolean) =>
     set((s) => {
+      // the first time columns are changed, keep today's automatic hiding as an explicit choice
+      if (!saved) heads.filter(autoHide).forEach((h) => s.hidden.includes('c:' + h) || s.hidden.push('c:' + h));
       s.hidden = s.hidden.filter((x) => x !== c && x !== '+' + c);
       if (sys) {
         const def = defaultSys.includes(c);
