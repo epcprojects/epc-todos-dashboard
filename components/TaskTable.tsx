@@ -50,6 +50,8 @@ interface Props {
   team?: Team;
   admin: boolean;
   empty?: ReactNode;
+  /** Team pages: show only founder content (true) or only regular tasks (false/omitted). */
+  founder?: boolean;
 }
 
 function SearchBox({ tkey, value, onCommit }: { tkey: string; value: string; onCommit: (v: string) => void }) {
@@ -120,13 +122,13 @@ function Cell({ t, h }: { t: CTask; h: string }) {
   );
 }
 
-export function TaskTable({ tkey, team, admin, empty }: Props) {
+export function TaskTable({ tkey, team, admin, empty, founder }: Props) {
   const { tasks, today, tstate, updTable, openDrawer, bulk, confirmBox, toast } = useApp();
   const st = tstate(tkey);
   const f = st.f;
 
-  // a team page never lists founder content here: it has its own tab
-  const base = useMemo(() => (team ? tasks.filter((t) => t.team === team && !t.founder) : tasks), [tasks, team]);
+  // a team page lists either its regular tasks or, in the Founder content view, only its founder tasks
+  const base = useMemo(() => (team ? tasks.filter((t) => t.team === team && !!t.founder === !!founder) : tasks), [tasks, team, founder]);
   const activeBase = useMemo(() => base.filter((t) => !t.archived), [base]);
 
   const plats = useMemo(() => uniq(base, (t) => t._plats), [base]);

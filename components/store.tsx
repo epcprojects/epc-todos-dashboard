@@ -70,8 +70,11 @@ interface Ctx {
   tables: Record<string, TableState>;
   tstate: (key: string) => TableState;
   updTable: (key: string, fn: (s: TableState) => void) => void;
-  teamTab: Record<string, 'queue' | 'table' | 'founder'>;
-  setTeamTab: (team: string, tab: 'queue' | 'table' | 'founder') => void;
+  teamTab: Record<string, 'queue' | 'table'>;
+  setTeamTab: (team: string, tab: 'queue' | 'table') => void;
+  /** Per team page: true while the Founder content view is on (queue and table then show only founder content). */
+  teamFounder: Record<string, boolean>;
+  setTeamFounder: (team: string, on: boolean) => void;
   qExpand: Record<string, boolean>;
   setQExpand: (k: string) => void;
   cal: { month: string | null; sel: string | null };
@@ -153,7 +156,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
   const [view, setViewState] = useState('dashboard');
   const [tables, setTables] = useState<Record<string, TableState>>({});
-  const [teamTab, setTeamTabState] = useState<Record<string, 'queue' | 'table' | 'founder'>>({});
+  const [teamTab, setTeamTabState] = useState<Record<string, 'queue' | 'table'>>({});
+  const [teamFounder, setTeamFounderState] = useState<Record<string, boolean>>({});
   const [qExpand, setQExpandState] = useState<Record<string, boolean>>({});
   const [cal, setCal] = useState<{ month: string | null; sel: string | null }>({ month: null, sel: null });
   const [rep, setRep] = useState<{ kind: PeriodKind; off: number }>({ kind: 'week', off: 0 });
@@ -471,7 +475,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   );
   const teamQuick = useCallback(
     (team: string, qk: string) => {
-      updTable('team-' + team, (st) => {
+      updTable('team-' + team + (teamFounder[team] ? '-founder' : ''), (st) => {
         st.f.status = '';
         st.f.quick = '';
         if (STATUS_QUICK.includes(qk)) st.f.status = qk;
@@ -480,7 +484,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
       });
       setTeamTabState((t) => ({ ...t, [team]: 'table' }));
     },
-    [updTable],
+    [updTable, teamFounder],
   );
 
   /* ---------- drawer ---------- */
@@ -698,6 +702,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
     updTable,
     teamTab,
     setTeamTab: (team, tab) => setTeamTabState((t) => ({ ...t, [team]: tab })),
+    teamFounder,
+    setTeamFounder: (team, on) => setTeamFounderState((t) => ({ ...t, [team]: on })),
     qExpand,
     setQExpand: (k) => setQExpandState((x) => ({ ...x, [k]: true })),
     cal,

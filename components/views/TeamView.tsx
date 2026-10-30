@@ -12,19 +12,20 @@ import { CovScale, PageHeader, StatStrip } from '../ui';
 import { TaskTable } from '../TaskTable';
 
 export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
-  const { act, today, settings, teamTab, setTeamTab, qExpand, setQExpand, teamQuick, setViewAs, nav } = useApp();
+  const { act, today, settings, teamTab, setTeamTab, teamFounder, setTeamFounder, qExpand, setQExpand, teamQuick, setViewAs, nav } = useApp();
   const mine = act.filter((t) => t.team === team);
-  const list = mine.filter((t) => !t.founder);
   const founderList = mine.filter((t) => t.founder);
+  const fm = !!teamFounder[team]; // Founder content view: everything on the page is limited to founder content
+  const list = fm ? founderList : mine.filter((t) => !t.founder);
   const title = team === 'designer' ? 'Graphic Design Tasks' : team === 'editor' ? 'Video Editing Tasks' : `${TEAMS[team] || 'Team'} Tasks`;
-  const key = 'team-' + team;
+  const key = 'team-' + team + (fm ? '-founder' : '');
   const empty = (
     <div className="empty">
       <h2>{team === 'designer' ? 'No design tasks assigned.' : team === 'editor' ? 'No video tasks assigned.' : 'No tasks assigned.'}</h2>
       {admin ? <p className="muted">Assign a sheet or tasks to this team in Task Distribution.</p> : null}
     </div>
   );
-  const tab = teamTab[team] === 'founder' ? 'founder' : teamTab[team] === 'table' ? 'table' : 'queue';
+  const tab = teamTab[team] === 'table' ? 'table' : 'queue';
   const scheduledToday = list.filter((t) => t.postDate === today);
   const doneToday = list.filter((t) => localDay(t.completedAt) === today).length;
   const ip = list.filter((t) => t.status === 'in_progress').length;
@@ -96,34 +97,33 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
               All tasks
             </button>
           </div>
-          <button role="tab" className="founder-tab" aria-selected={tab === 'founder'} onClick={() => setTeamTab(team, 'founder')}>
+          <button className="founder-tab" aria-pressed={fm} onClick={() => setTeamFounder(team, !fm)}>
             <Crown className="size-4" />
             Founder content
             <span className="num">{founderList.filter((t) => t.status !== 'completed').length}</span>
           </button>
         </div>
-        {tab === 'founder' ? (
-          <div className="founder-pane">
-            <div className="founder-banner">
-              <Crown className="size-5" />
-              <div>
-                <b>Founder content</b>
-                <span>Content from the founder. It is listed separately from the regular queue, so check here first.</span>
-              </div>
+        {fm ? (
+          <div className="founder-banner">
+            <Crown className="size-5" />
+            <div>
+              <b>Founder content</b>
+              <span>Everything below, including the numbers above, is limited to founder content.</span>
             </div>
-            {founderList.length ? (
-              <Queue team={team + '-founder'} list={founderList} today={today} qExpand={qExpand} setQExpand={setQExpand} />
-            ) : (
-              <div className="empty">
-                <h2>No founder content yet.</h2>
-                <p className="muted">{admin ? 'Tick “Founder content” for a sheet on the Assign step of Content Import and it will show up here.' : 'Founder content assigned to you will show up here.'}</p>
-              </div>
-            )}
+            <button className="btn sm" onClick={() => setTeamFounder(team, false)}>
+              Back to regular content
+            </button>
+          </div>
+        ) : null}
+        {fm && !founderList.length ? (
+          <div className="empty">
+            <h2>No founder content yet.</h2>
+            <p className="muted">{admin ? 'Tick “Founder content” for a sheet on the Assign step of Content Import and it will show up here.' : 'Founder content assigned to you will show up here.'}</p>
           </div>
         ) : tab === 'queue' ? (
-          <Queue team={team} list={list} today={today} qExpand={qExpand} setQExpand={setQExpand} />
+          <Queue team={fm ? team + '-founder' : team} list={list} today={today} qExpand={qExpand} setQExpand={setQExpand} />
         ) : (
-          <TaskTable tkey={key} team={team as Team} admin={admin} empty={empty} />
+          <TaskTable tkey={key} team={team as Team} admin={admin} empty={empty} founder={fm} />
         )}
       </div>
     </>

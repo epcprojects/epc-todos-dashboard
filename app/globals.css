@@ -504,11 +504,12 @@ svg.chart .vl { fill: var(--foreground); font-size: 12px; }
 .dark .founder-tab { color: color-mix(in srgb, var(--primary), #fff 25%); }
 .founder-tab:hover { background: color-mix(in srgb, var(--primary), transparent 82%); }
 .founder-tab .num { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font-size: 12px; font-weight: 800; }
-.founder-tab[aria-selected="true"] { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 14px color-mix(in srgb, var(--primary), transparent 65%); }
-.founder-tab[aria-selected="true"] .num { background: var(--primary-foreground); color: var(--primary); }
+.founder-tab[aria-pressed="true"] { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 14px color-mix(in srgb, var(--primary), transparent 65%); }
+.founder-tab[aria-pressed="true"] .num { background: var(--primary-foreground); color: var(--primary); }
 .founder-tab:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
 .founder-banner { display: flex; gap: 12px; align-items: center; padding: 14px 16px; margin-bottom: 18px; border-radius: var(--radius-xl); border: 1px solid color-mix(in srgb, var(--primary), transparent 55%); background: linear-gradient(90deg, color-mix(in srgb, var(--primary), transparent 86%), transparent); color: var(--primary); }
 .dark .founder-banner { color: color-mix(in srgb, var(--primary), #fff 25%); }
+.founder-banner .btn { margin-left: auto; flex: none; }
 .founder-banner b { display: block; font-size: 15px; color: var(--foreground); }
 .founder-banner span { font-size: 13.5px; color: var(--muted-foreground); }
 .qi.fd { box-shadow: inset 4px 0 0 var(--primary); background: color-mix(in srgb, var(--primary), transparent 95%); }
