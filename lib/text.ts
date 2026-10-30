@@ -13,6 +13,13 @@ export function platKey(p: string): string | null {
   return f ? f[0] : null;
 }
 
+/** The caption of a task: the Excel column called "Caption", "Caption / Social Copy" or "Social Copy". '' when the sheet has none. */
+export function captionOf(headers: string[], vals: string[]): string {
+  const h = (headers || []).map((x) => norm(x));
+  const i = h.findIndex((x) => x === 'caption / social copy') >= 0 ? h.findIndex((x) => x === 'caption / social copy') : h.findIndex((x) => x.startsWith('caption')) >= 0 ? h.findIndex((x) => x.startsWith('caption')) : h.findIndex((x) => x.includes('social copy'));
+  return i >= 0 ? String((vals || [])[i] ?? '').trim() : '';
+}
+
 export function splitPlat(s: string): string[] {
   return String(s || '')
     .split(/\s*(?:,|\/|&|\||\+|;|\n|\band\b)\s*/i)

@@ -2,6 +2,7 @@ import { z } from 'zod';
 import { isAllowedName, ALLOWED_EXTENSIONS, parseKey, sanitizeName } from '@/lib/manage-config';
 import { requireSession } from '@/lib/server/auth';
 import { ApiError, body, handle, json } from '@/lib/server/http';
+import { moveLink } from '@/lib/server/filelinks';
 import { renameObject } from '@/lib/server/s3';
 
 export const dynamic = 'force-dynamic';
@@ -18,5 +19,6 @@ export const POST = handle(async (req: Request) => {
   if (!isAllowedName(name)) throw new ApiError(400, `"${name}" is not an allowed file type (${ALLOWED_EXTENSIONS.join(', ')}).`);
   const key = await renameObject(b.key, name);
   if (key === null) throw new ApiError(409, `A file named "${name}" already exists in this folder. Choose another name.`);
+  if (key !== b.key) await moveLink(b.key, key);
   return json({ ok: true, key, name });
 });

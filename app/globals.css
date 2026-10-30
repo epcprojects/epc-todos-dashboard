@@ -514,3 +514,42 @@ svg.chart .vl { fill: var(--foreground); font-size: 12px; }
 .founder-banner span { font-size: 13.5px; color: var(--muted-foreground); }
 .qi.fd { box-shadow: inset 4px 0 0 var(--primary); background: color-mix(in srgb, var(--primary), transparent 95%); }
 .qi.fd.od { box-shadow: inset 4px 0 0 var(--danger); }
+
+/* Content Manage: attached task + caption */
+.mg-attach { display: inline-flex; align-items: center; gap: 5px; margin-top: 4px; padding: 0; border: 0; background: none; color: var(--primary); font-size: 13px; font-weight: 600; cursor: pointer; }
+.dark .mg-attach { color: color-mix(in srgb, var(--primary), #fff 20%); }
+.mg-attach:hover { text-decoration: underline; }
+.mg-link { display: grid; gap: 6px; margin-top: 6px; min-width: 0; }
+.mg-chip { display: inline-flex; align-items: center; gap: 5px; max-width: 100%; justify-self: start; padding: 2px 9px; border: 1px solid color-mix(in srgb, var(--primary), transparent 65%); border-radius: 999px; background: color-mix(in srgb, var(--primary), transparent 90%); color: var(--primary); font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.dark .mg-chip { color: color-mix(in srgb, var(--primary), #fff 25%); }
+.mg-chip span { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.mg-cap-row { display: flex; gap: 8px; align-items: flex-start; }
+.mg-caption { margin: 0; flex: 1; min-width: 0; font-size: 13px; line-height: 1.45; font-weight: 400; color: var(--muted-foreground); display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; white-space: pre-line; }
+.mg-card .mg-caption { -webkit-line-clamp: 3; }
+.mg-copy { flex: none; padding: 0 8px; }
+.mg-nocap { margin: 0; font-size: 12.5px; font-weight: 400; color: var(--muted-foreground); font-style: italic; }
+.mg-caption-full { white-space: pre-wrap; word-break: break-word; font-size: 14px; line-height: 1.55; padding: 12px; border-radius: var(--radius-lg); background: var(--muted); max-height: 40vh; overflow-y: auto; }
+
+/* Task picker */
+.tp { display: grid; gap: 6px; width: 100%; }
+.tp-btn { display: flex; align-items: center; justify-content: space-between; gap: 8px; width: 100%; min-height: 36px; padding: 6px 10px; border: 1px solid var(--input); border-radius: var(--radius-md); background: var(--card); color: var(--foreground); font-size: 14px; text-align: left; cursor: pointer; }
+.tp-btn:focus-visible { outline: 2px solid var(--ring); outline-offset: 1px; }
+.tp-ph { color: var(--muted-foreground); }
+.tp-val { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-panel { border: 1px solid var(--border); border-radius: var(--radius-lg); background: var(--popover); overflow: hidden; }
+.tp-search { display: flex; align-items: center; gap: 8px; padding: 0 10px; border-bottom: 1px solid var(--border); }
+.tp-search input { flex: 1; height: 38px; border: 0; background: transparent; color: inherit; font-size: 14px; outline: none; }
+.tp-list { list-style: none; margin: 0; padding: 4px; max-height: 220px; overflow-y: auto; }
+.tp-opt { display: grid; gap: 1px; width: 100%; padding: 7px 9px; border: 0; border-radius: var(--radius-md); background: transparent; color: inherit; text-align: left; font-size: 14px; cursor: pointer; }
+.tp-opt:hover, .tp-opt[aria-selected="true"] { background: var(--accent); }
+.tp-opt b { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.tp-opt span { font-size: 12.5px; color: var(--muted-foreground); display: flex; gap: 6px; align-items: center; }
+.tp-opt em { font-style: normal; padding: 0 7px; line-height: 18px; }
+.tp-note { padding: 10px; font-size: 13px; color: var(--muted-foreground); }
+.mg-link { max-width: 520px; }
+.mg-chip { max-width: min(100%, 240px); }
+.mg-caption { overflow-wrap: anywhere; }
+@media (max-width: 640px) { .mg-chip { max-width: 190px; } .mg-link { max-width: 210px; } }
+/* in the table the attached task must not widen the Name column (it fills the column instead) */
+table.t td .mg-link { width: 0; min-width: 100%; max-width: 560px; }
+table.t td .mg-chip { max-width: 100%; }

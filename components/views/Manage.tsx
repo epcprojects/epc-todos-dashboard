@@ -1,16 +1,19 @@
 'use client';
-import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, List, Pencil, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, Link2, List, Pencil, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, sanitizeName, type ManageFile } from '@/lib/manage-config';
+import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, mediaKind, sanitizeName, type FileLink, type ManageFile, type MediaKind, type TaskOption } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
-import { fmtDT } from '@/lib/dates';
+import { STATUS, type Status } from '@/lib/constants';
+import { fmtDate, fmtDT } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { PlatformIcon, hasPlatformIcon } from '../PlatformIcon';
+import { CopyButton } from '../manage/CopyButton';
+import { TaskPicker } from '../manage/TaskPicker';
 import { useApp } from '../store';
-import { PageHeader } from '../ui';
+import { PageHeader, PlatPills } from '../ui';
 
 type SortKey = 'name' | 'size' | 'date';
 interface UploadItem {
@@ -67,10 +70,38 @@ function FileBadge({ name, big }: { name: string; big?: boolean }) {
   );
 }
 
-/** Image / video / PDF preview in a modal, with previous / next across the folder. */
-function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDownload, onRename, onDelete }: { file: ManageFile; index: number; total: number; url?: string; onClose: () => void; onPrev: () => void; onNext: () => void; onDownload: () => void; onRename: () => void; onDelete: () => void }) {
+/** Under a picture or video: the attached task and its caption with a one-click copy, or an "Attach task" button. */
+function LinkLine({ file, link, onAttach }: { file: ManageFile; link?: FileLink; onAttach: () => void }) {
+  if (!mediaKind(file.name)) return null;
+  if (!link)
+    return (
+      <button type="button" className="mg-attach" onClick={onAttach}>
+        <Link2 className="size-3.5" /> Attach task
+      </button>
+    );
+  return (
+    <div className="mg-link">
+      <button type="button" className="mg-chip" onClick={onAttach} title="Change the attached task">
+        <Link2 className="size-3 shrink-0" />
+        <span>{link.title}</span>
+      </button>
+      {link.caption ? (
+        <div className="mg-cap-row">
+          <p className="mg-caption">{link.caption}</p>
+          <CopyButton text={link.caption} className="btn sm mg-copy" />
+        </div>
+      ) : (
+        <p className="mg-nocap">This task has no caption.</p>
+      )}
+    </div>
+  );
+}
+
+/** Image / video / PDF preview in a modal, with previous / next across the folder. Pictures and videos also show their task caption beside the file. */
+function PreviewDialog({ file, index, total, url, link, onAttach, onClose, onPrev, onNext, onDownload, onRename, onDelete }: { file: ManageFile; index: number; total: number; url?: string; link?: FileLink; onAttach: () => void; onClose: () => void; onPrev: () => void; onNext: () => void; onDownload: () => void; onRename: () => void; onDelete: () => void }) {
   useEffect(() => {
     const h = (e: KeyboardEvent) => {
+      if ((e.target as HTMLElement | null)?.closest?.('input, textarea, select')) return; // typing in a search box must not flip files
       if (e.key === 'ArrowLeft') onPrev();
       if (e.key === 'ArrowRight') onNext();
     };
@@ -78,10 +109,47 @@ function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDow
     return () => window.removeEventListener('keydown', h);
   }, [onPrev, onNext]);
   const kind = kindOf(file.name);
+  const mk = mediaKind(file.name);
+  const panel = mk ? (
+    <aside className="flex max-h-[72vh] min-h-0 flex-col gap-3 overflow-y-auto border-t p-4 lg:border-t-0 lg:border-l" aria-label="Caption">
+      <div className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase">Caption</div>
+      {link ? (
+        <>
+          <div>
+            <div className="text-sm leading-snug font-semibold">{link.title}</div>
+            <div className="mt-1.5 flex flex-wrap items-center gap-1.5 text-[13px] text-muted-foreground">
+              {link.founder ? <span className="tag founder">Founder</span> : null}
+              {link.platform ? <PlatPills value={link.platform} /> : null}
+              {link.postDate ? <span>{fmtDate(link.postDate, { year: undefined })}</span> : null}
+              <span className="tag">{STATUS[link.status as Status] || link.status}</span>
+            </div>
+          </div>
+          {link.caption ? (
+            <>
+              <div className="mg-caption-full">{link.caption}</div>
+              <CopyButton text={link.caption} label="Copy caption" className="btn primary" showLabel />
+            </>
+          ) : (
+            <p className="text-sm text-muted-foreground">This task has no caption.</p>
+          )}
+          <Button variant="outline" size="lg" onClick={onAttach}>
+            <Link2 /> Change task
+          </Button>
+        </>
+      ) : (
+        <>
+          <p className="text-sm text-muted-foreground">No task is attached to this {mk === 'image' ? 'picture' : 'video'} yet. Attach one to see its caption here.</p>
+          <Button size="lg" onClick={onAttach}>
+            <Link2 /> Attach task
+          </Button>
+        </>
+      )}
+    </aside>
+  ) : null;
   return (
     <Dialog open onOpenChange={(o) => !o && onClose()}>
-      <DialogContent showCloseButton={false} className="max-w-[94vw] gap-0 overflow-hidden p-0 sm:max-w-5xl">
-        <div className="flex items-center gap-3 border-b px-4 py-3">
+      <DialogContent showCloseButton={false} className={`max-w-[94vw] gap-0 overflow-hidden p-0 ${mk ? 'sm:max-w-6xl' : 'sm:max-w-5xl'}`}>
+        <div className="flex flex-wrap items-center gap-3 border-b px-4 py-3">
           <FileBadge name={file.name} />
           <div className="min-w-0 flex-1">
             <DialogTitle className="truncate text-[15px] font-semibold">{file.name}</DialogTitle>
@@ -89,19 +157,20 @@ function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDow
               {formatBytes(file.size)} · {hereLabel(file.path)} · {fmtDT(file.lastModified)}
             </DialogDescription>
           </div>
-          <Button variant="outline" size="lg" onClick={onDownload}>
-            <Download /> Download
+          <Button variant="outline" size="lg" onClick={onDownload} aria-label="Download">
+            <Download /> <span className="max-sm:hidden">Download</span>
           </Button>
-          <Button variant="outline" size="lg" onClick={onRename}>
-            <Pencil /> Rename
+          <Button variant="outline" size="lg" onClick={onRename} aria-label="Rename">
+            <Pencil /> <span className="max-sm:hidden">Rename</span>
           </Button>
-          <Button variant="destructive" size="lg" onClick={onDelete}>
-            <Trash2 /> Delete
+          <Button variant="destructive" size="lg" onClick={onDelete} aria-label="Delete">
+            <Trash2 /> <span className="max-sm:hidden">Delete</span>
           </Button>
           <Button variant="ghost" size="icon-lg" onClick={onClose} aria-label="Close preview">
             <X />
           </Button>
         </div>
+        <div className={mk ? 'grid min-h-0 lg:grid-cols-[minmax(0,1fr)_340px]' : ''}>
         <div className="relative grid min-h-[50vh] place-items-center bg-muted/60 p-3">
           {total > 1 ? (
             <>
@@ -131,6 +200,8 @@ function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDow
               </Button>
             </div>
           )}
+        </div>
+        {panel}
         </div>
         <div className="flex items-center justify-between border-t px-4 py-2 text-[13px] text-muted-foreground">
           <span className="tabular-nums">
@@ -163,7 +234,10 @@ export function ManageView() {
   const [busy, setBusy] = useState(false);
   const [pv, setPv] = useState<string | null>(null);
   const [renaming, setRenaming] = useState<{ file: ManageFile; name: string; error: string; busy: boolean } | null>(null);
-  const [clash, setClash] = useState<{ picked: File[]; names: string[] } | null>(null);
+  const [pend, setPend] = useState<{ picked: File[]; names: string[]; attach: Record<number, string | null> } | null>(null);
+  const [links, setLinks] = useState<Record<string, FileLink>>({});
+  const [opts, setOpts] = useState<Partial<Record<MediaKind, TaskOption[]>>>({});
+  const [attach, setAttach] = useState<{ file: ManageFile; kind: MediaKind; value: string | null; had: boolean; busy: boolean; error: string } | null>(null);
   const [clashMode, setClashMode] = useState<'replace' | 'keep'>('replace');
   const fileIn = useRef<HTMLInputElement>(null);
   const uid = useRef(1);
@@ -187,9 +261,11 @@ export function ManageView() {
 
   const load = useCallback(async () => {
     try {
-      const r = await api<{ files: ManageFile[]; folders: string[] }>('/api/manage/files');
+      const r = await api<{ files: ManageFile[]; folders: string[]; links?: Record<string, FileLink> }>('/api/manage/files');
       setFiles(r.files);
       setSubfolders(r.folders);
+      setLinks(r.links || {});
+      setOpts({}); // the task lists are fetched again the next time a picker opens
       setErr('');
     } catch (e) {
       setErr(e instanceof Error ? e.message : 'Could not load the files.');
@@ -324,36 +400,52 @@ export function ManageView() {
   /* ---------- upload ---------- */
   const patch = (id: number, p: Partial<UploadItem>) => setUploads((u) => u.map((x) => (x.id === id ? { ...x, ...p } : x)));
 
-  const startUpload = async (picked: File[], onExisting?: 'replace' | 'keep') => {
+  const ensureOpts = useCallback(
+    async (kind: MediaKind) => {
+      if (opts[kind]) return;
+      try {
+        const r = await api<{ tasks: TaskOption[] }>(`/api/manage/task-options?kind=${kind}`);
+        setOpts((o) => ({ ...o, [kind]: r.tasks }));
+      } catch {
+        setOpts((o) => ({ ...o, [kind]: [] }));
+      }
+    },
+    [opts],
+  );
+
+  const startUpload = async (picked: File[], go?: { replace: boolean; attach: Record<number, string | null> }) => {
     if (!picked.length) return;
-    if (!onExisting) {
+    if (!go) {
       // same name already in this folder: ask whether to replace it or keep both
       const have = new Set(inFolder.map((f) => f.name.toLowerCase()));
       const names = picked.map((f) => sanitizeName(f.name)).filter((n) => have.has(n.toLowerCase()));
-      if (names.length) {
+      const kinds = new Set(picked.map((f) => mediaKind(f.name)).filter(Boolean) as MediaKind[]);
+      // a name clash, or pictures / videos that can have a task attached: show the options first
+      if (names.length || kinds.size) {
         setClashMode('replace');
-        setClash({ picked, names: [...new Set(names)] });
+        setPend({ picked, names: [...new Set(names)], attach: {} });
+        kinds.forEach((k) => void ensureOpts(k));
         return;
       }
     }
-    const ok: { file: File; id: number }[] = [];
+    const ok: { file: File; id: number; idx: number }[] = [];
     const rejected: UploadItem[] = [];
-    for (const file of picked) {
+    for (const [idx, file] of picked.entries()) {
       const id = uid.current++;
       const base = { id, name: file.name, size: file.size, progress: 0 };
       if (file.size > MAX_FILE_BYTES) rejected.push({ ...base, status: 'failed', error: `Too large (${formatBytes(file.size)}). The limit is ${formatBytes(MAX_FILE_BYTES)}.` });
       else if (!isAllowedName(file.name)) rejected.push({ ...base, status: 'failed', error: `File type not allowed (${ALLOWED_EXTENSIONS.join(', ')}).` });
-      else ok.push({ file, id });
+      else ok.push({ file, id, idx });
     }
     setUploads((u) => [...u, ...rejected, ...ok.map((x) => ({ id: x.id, name: x.file.name, size: x.file.size, progress: 0, status: 'queued' as const }))]);
     if (!ok.length) return;
 
     // 1) ask the server for signed upload forms (in batches), 2) send each file straight to S3
-    const queue: { item: { file: File; id: number }; target: Target }[] = [];
+    const queue: { item: { file: File; id: number; idx: number }; target: Target }[] = [];
     for (let i = 0; i < ok.length; i += MAX_FILES_PER_UPLOAD_REQUEST) {
       const chunk = ok.slice(i, i + MAX_FILES_PER_UPLOAD_REQUEST);
       try {
-        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { path, replace: onExisting === 'replace', files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
+        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { path, replace: !!go?.replace, files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
         chunk.forEach((c, k) => queue.push({ item: c, target: r.targets[k] }));
       } catch (e) {
         chunk.forEach((c) => patch(c.id, { status: 'failed', error: e instanceof Error ? e.message : 'Could not start the upload.' }));
@@ -369,6 +461,14 @@ export function ManageView() {
           await uploadToS3(target.url, target.fields, item.file, (p) => patch(item.id, { progress: p })).promise;
           patch(item.id, { status: 'done', progress: 1 });
           done++;
+          const tid = go?.attach[item.idx];
+          if (tid) {
+            try {
+              await api('/api/manage/link', { body: { key: target.key, taskId: tid } });
+            } catch (e) {
+              toast(`${item.file.name} was uploaded, but its task could not be attached: ${e instanceof Error ? e.message : 'unknown error'}`, 'bad');
+            }
+          }
         } catch (e) {
           patch(item.id, { status: 'failed', error: e instanceof Error ? e.message : 'Upload failed' });
         }
@@ -422,6 +522,26 @@ export function ManageView() {
       await load();
     } catch (e) {
       setMkdir((m) => (m ? { ...m, busy: false, error: e instanceof Error ? e.message : 'Could not create the folder.' } : m));
+    }
+  };
+
+  const openAttach = (file: ManageFile) => {
+    const kind = mediaKind(file.name);
+    if (!kind) return;
+    setAttach({ file, kind, value: links[file.key]?.taskId ?? null, had: !!links[file.key], busy: false, error: '' });
+    void ensureOpts(kind);
+  };
+  const saveAttach = async () => {
+    if (!attach) return;
+    if (!attach.had && !attach.value) return setAttach(null);
+    setAttach({ ...attach, busy: true, error: '' });
+    try {
+      await api('/api/manage/link', { body: { key: attach.file.key, taskId: attach.value } });
+      toast(attach.value ? 'Task attached' : 'Task removed from the file');
+      setAttach(null);
+      await load();
+    } catch (e) {
+      setAttach((a) => (a ? { ...a, busy: false, error: e instanceof Error ? e.message : 'Could not save.' } : a));
     }
   };
 
@@ -617,6 +737,7 @@ export function ManageView() {
                               </span>
                             </span>
                           </button>
+                          <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} />
                         </td>
                         <td className="@max-3xl:hidden">{extOf(f.name).toUpperCase() || 'File'}</td>
                         <td className="num @max-3xl:hidden">{formatBytes(f.size)}</td>
@@ -663,6 +784,7 @@ export function ManageView() {
                           {formatBytes(f.size)} · {new Date(f.lastModified).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                         </span>
                       </div>
+                      <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} />
                       <div className="flex gap-1.5">
                         <button className="btn sm flex-1" onClick={() => void download([f.key])}>
                           Download
@@ -767,51 +889,104 @@ export function ManageView() {
         </DialogContent>
       </Dialog>
 
-      <Dialog open={!!clash} onOpenChange={(o) => !o && setClash(null)}>
-        <DialogContent className="sm:max-w-md">
-          <DialogTitle className="text-lg font-semibold">Upload options</DialogTitle>
+      <Dialog open={!!pend} onOpenChange={(o) => !o && setPend(null)}>
+        <DialogContent className="max-h-[90vh] gap-4 overflow-y-auto sm:max-w-xl">
+          <DialogTitle className="text-lg font-semibold">Upload {pend ? (pend.picked.length === 1 ? '1 file' : `${pend.picked.length} files`) : ''}</DialogTitle>
           <DialogDescription className="text-sm leading-relaxed">
-            {clash && clash.names.length === 1 ? (
+            {pend && pend.names.length ? (
               <>
-                <b className="text-foreground">{clash.names[0]}</b> already exists in this location.
+                {pend.names.length === 1 ? (
+                  <>
+                    <b className="text-foreground">{pend.names[0]}</b> already exists in this location.
+                  </>
+                ) : (
+                  <>
+                    <b className="text-foreground">{pend.names.length} files</b> already exist in this location ({pend.names.slice(0, 3).join(', ')}
+                    {pend.names.length > 3 ? ', …' : ''}).
+                  </>
+                )}{' '}
+                Replace {pend.names.length === 1 ? 'it' : 'them'} or keep both?
               </>
             ) : (
-              <>
-                <b className="text-foreground">{clash?.names.length} files</b> already exist in this location
-                {clash ? ` (${clash.names.slice(0, 3).join(', ')}${clash.names.length > 3 ? ', …' : ''})` : ''}.
-              </>
-            )}{' '}
-            Do you want to replace the existing {clash && clash.names.length === 1 ? 'file' : 'files'} with the new {clash && clash.names.length === 1 ? 'version' : 'versions'} or keep both?
+              'Optionally attach a task to each picture or video. Its caption then shows with the file.'
+            )}
           </DialogDescription>
-          <div className="grid gap-1" role="radiogroup" aria-label="Upload options">
-            {(
-              [
-                ['replace', 'Replace existing file'],
-                ['keep', 'Keep both files'],
-              ] as const
-            ).map(([v, text]) => (
-              <label key={v} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2.5 hover:bg-muted">
-                <input type="radio" name="clash-mode" className="size-4 accent-[var(--primary)]" checked={clashMode === v} onChange={() => setClashMode(v)} />
-                <span className="text-sm font-medium">
-                  {text}
-                  {v === 'keep' ? <span className="block text-[13px] font-normal text-muted-foreground">The new file is saved as “name (1)”.</span> : <span className="block text-[13px] font-normal text-muted-foreground">The old version is overwritten and cannot be recovered.</span>}
-                </span>
-              </label>
-            ))}
-          </div>
+          {pend && pend.names.length ? (
+            <div className="grid gap-1" role="radiogroup" aria-label="When a name already exists">
+              {(
+                [
+                  ['replace', 'Replace existing file', 'The old version is overwritten and cannot be recovered.'],
+                  ['keep', 'Keep both files', 'The new file is saved as “name (1)”.'],
+                ] as const
+              ).map(([v, text, hint]) => (
+                <label key={v} className="flex cursor-pointer items-center gap-3 rounded-lg px-2 py-2 hover:bg-muted">
+                  <input type="radio" name="clash-mode" className="size-4 accent-[var(--primary)]" checked={clashMode === v} onChange={() => setClashMode(v)} />
+                  <span className="text-sm font-medium">
+                    {text}
+                    <span className="block text-[13px] font-normal text-muted-foreground">{hint}</span>
+                  </span>
+                </label>
+              ))}
+            </div>
+          ) : null}
+          {pend && pend.picked.some((f) => mediaKind(f.name)) ? (
+            <div className="grid gap-3">
+              <div className="text-xs font-bold tracking-[0.1em] text-muted-foreground uppercase">Attach a task (optional)</div>
+              {pend.picked.map((f, idx) => {
+                const k = mediaKind(f.name);
+                if (!k) return null;
+                return (
+                  <div key={idx} className="grid gap-1.5">
+                    <div className="flex items-center gap-2 text-sm font-medium">
+                      <FileBadge name={f.name} />
+                      <span className="min-w-0 break-all">{f.name}</span>
+                    </div>
+                    <TaskPicker kind={k} options={opts[k] ?? null} value={pend.attach[idx] ?? null} onChange={(id) => setPend((p) => (p ? { ...p, attach: { ...p.attach, [idx]: id } } : p))} />
+                  </div>
+                );
+              })}
+            </div>
+          ) : null}
           <div className="flex justify-end gap-2 pt-1">
-            <Button variant="ghost" size="lg" onClick={() => setClash(null)}>
+            <Button variant="ghost" size="lg" onClick={() => setPend(null)}>
               Cancel
             </Button>
             <Button
               size="lg"
               onClick={() => {
-                const c = clash;
-                setClash(null);
-                if (c) void startUpload(c.picked, clashMode);
+                const c = pend;
+                setPend(null);
+                if (c) void startUpload(c.picked, { replace: c.names.length > 0 && clashMode === 'replace', attach: c.attach });
               }}
             >
               Upload
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!attach} onOpenChange={(o) => !o && !attach?.busy && setAttach(null)}>
+        <DialogContent className="gap-4 sm:max-w-md">
+          <DialogTitle className="text-lg font-semibold">{attach?.had ? 'Change task' : 'Attach task'}</DialogTitle>
+          <DialogDescription className="text-sm break-all">
+            {attach ? (
+              <>
+                {attach.kind === 'image' ? 'A Graphic Designer task' : 'A Video Editor task'} for <b className="text-foreground">{attach.file.name}</b>. Its caption shows with the file.
+              </>
+            ) : null}
+          </DialogDescription>
+          {attach ? <TaskPicker kind={attach.kind} options={opts[attach.kind] ?? null} value={attach.value} currentTitle={links[attach.file.key]?.title} onChange={(id) => setAttach((a) => (a ? { ...a, value: id, error: '' } : a))} /> : null}
+          {attach?.error ? (
+            <p className="text-sm text-destructive" role="alert">
+              {attach.error}
+            </p>
+          ) : null}
+          <div className="flex justify-end gap-2">
+            <Button variant="ghost" size="lg" disabled={attach?.busy} onClick={() => setAttach(null)}>
+              Cancel
+            </Button>
+            <Button size="lg" disabled={attach?.busy || (attach ? attach.value === (links[attach.file.key]?.taskId ?? null) : true)} onClick={() => void saveAttach()}>
+              {attach?.busy ? 'Saving…' : attach && !attach.value && attach.had ? 'Remove task' : 'Save'}
             </Button>
           </div>
         </DialogContent>
@@ -823,6 +998,8 @@ export function ManageView() {
           index={pvIdx}
           total={list.length}
           url={thumbs[pvFile.key]}
+          link={links[pvFile.key]}
+          onAttach={() => openAttach(pvFile)}
           onClose={() => setPv(null)}
           onPrev={() => step(-1)}
           onNext={() => step(1)}

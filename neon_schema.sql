@@ -195,3 +195,14 @@ CREATE INDEX IF NOT EXISTS login_attempts_ip_idx ON login_attempts (ip, at DESC)
 --
 -- Start completely fresh (deletes ALL imports, tasks and history):
 --   TRUNCATE imports, deleted_tasks, login_attempts CASCADE;
+
+-- ---------------------------------------------------------------------
+-- File links: a task attached to a file in Content Manage (see migrations/003_file_tasks.sql)
+-- ---------------------------------------------------------------------
+CREATE TABLE IF NOT EXISTS file_tasks (
+  s3_key       TEXT PRIMARY KEY,                 -- full key in the bucket
+  task_id      TEXT NOT NULL REFERENCES tasks(id) ON DELETE CASCADE,
+  attached_by  TEXT NOT NULL DEFAULT '',
+  attached_at  TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS file_tasks_task_idx ON file_tasks (task_id);

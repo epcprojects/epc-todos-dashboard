@@ -28,6 +28,35 @@ export const VIDEO_EXTENSIONS = ['mp4', 'mov', 'webm', 'm4v'];
 
 export const MAX_FILES_PER_UPLOAD_REQUEST = 50;
 
+/** Which kind of task can be attached to a file: pictures go with Graphic Designer tasks, videos with Video Editor tasks. */
+export type MediaKind = 'image' | 'video';
+export function mediaKind(name: string): MediaKind | null {
+  const e = extOf(name);
+  return IMAGE_EXTENSIONS.includes(e) ? 'image' : VIDEO_EXTENSIONS.includes(e) ? 'video' : null;
+}
+export const TEAM_FOR_KIND: Record<MediaKind, string> = { image: 'designer', video: 'editor' };
+
+/** The task attached to a file, with the pieces Content Manage shows (the caption is read from the task each time). */
+export interface FileLink {
+  taskId: string;
+  title: string;
+  platform: string;
+  postDate: string | null;
+  team: string;
+  status: string;
+  founder: boolean;
+  caption: string;
+}
+
+/** A task offered in the "attach a task" dropdown. */
+export interface TaskOption {
+  id: string;
+  title: string;
+  platform: string;
+  postDate: string | null;
+  founder: boolean;
+}
+
 export const folderByKey = (key: string) => FOLDERS.find((f) => f.key === key);
 
 export function extOf(name: string): string {
