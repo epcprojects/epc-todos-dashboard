@@ -11,14 +11,19 @@ function GlowTile() {
     <div className="relative h-[204.29px] w-[145.427px] shrink-0" aria-hidden="true">
       <div className="absolute contents inset-[0_-35.02%_-0.03%_-33.79%]">
         <div className="absolute contents inset-[59.97%_-35.02%_-0.03%_-33.79%]">
-          <div
-            className="absolute inset-[57.86%_7.34%_-17.61%_8.57%] rounded-[18.184px] bg-[#a168ff] blur-[22.731px] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-84.339px_-18.412px] mask-size-[290.951px_127.291px]"
-            style={glow2}
-          />
-          <div
-            className="absolute inset-[59.64%_15.98%_-7.15%_17.12%] rounded-[18.184px] bg-[#a168ff] opacity-60 blur-[11.365px] mix-blend-plus-lighter mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-96.773px_-22.048px] mask-size-[290.951px_127.291px]"
-            style={glow2}
-          />
+          {/* Figma masks the glow first and blurs the result, so the blur sits on a wrapper around the masked layer */}
+          <div className="absolute inset-[57.86%_7.34%_-17.61%_8.57%] blur-[22.731px]">
+            <div
+              className="absolute inset-0 rounded-[18.184px] bg-[#a168ff] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-84.339px_-18.412px] mask-size-[290.951px_127.291px]"
+              style={glow2}
+            />
+          </div>
+          <div className="absolute inset-[59.64%_15.98%_-7.15%_17.12%] opacity-60 blur-[11.365px] mix-blend-plus-lighter">
+            <div
+              className="absolute inset-0 rounded-[18.184px] bg-[#a168ff] mask-alpha mask-intersect mask-no-clip mask-no-repeat mask-position-[-96.773px_-22.048px] mask-size-[290.951px_127.291px]"
+              style={glow2}
+            />
+          </div>
         </div>
         <div className="absolute inset-[0_7.52%_40.36%_8.7%] overflow-clip rounded-[18.184px]">
           <div className="pointer-events-none absolute inset-0 rounded-[18.184px]">
