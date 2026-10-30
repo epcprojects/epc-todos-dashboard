@@ -129,7 +129,7 @@ export function EmptyImport() {
     <div className="empty">
       <h2>No content calendar imported yet.</h2>
       <p className="muted">Upload your Excel content calendar. You will choose which sheets to import and who receives each one.</p>
-      <button className="btn primary" onClick={() => nav('import')}>
+      <button className="btn primary" onClick={() => nav('imports')}>
         Upload Content Excel
       </button>
     </div>

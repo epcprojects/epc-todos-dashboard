@@ -608,7 +608,7 @@ export function ManageView() {
   const crumbs = (
     <nav className="mg-crumbs" aria-label="Location">
       <button className="linkish" onClick={() => open('')}>
-        Content Manage
+        Content library
       </button>
       <span aria-hidden="true">›</span>
       {segs.length ? (
@@ -636,7 +636,7 @@ export function ManageView() {
   return (
     <>
       <PageHeader
-        title="Content Manage"
+        title="Content library"
         sub="Browse, upload, organise and download your media."
         eyebrow="Storage"
         actions={

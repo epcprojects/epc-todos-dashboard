@@ -4,16 +4,17 @@ import { fmtDT } from '@/lib/dates';
 import { headersFromValues, genericHeads } from '@/lib/text';
 import { api } from '@/lib/client/api';
 import { useState } from 'react';
-import { Archive, ArchiveRestore, FilePlus2, Trash2, Upload } from 'lucide-react';
+import { Archive, ArchiveRestore, FilePlus2, Trash2 } from 'lucide-react';
 import type { ImportRec, SheetMeta } from '@/lib/constants';
 import { AppendDialog } from '../AppendDialog';
 import { useApp } from '../store';
-import { EmptyImport, PageHeader } from '../ui';
+import { PageHeader } from '../ui';
+import { ImportUploader } from './ImportPage';
 
 const MODE_LABEL: Record<string, string> = { skip: 'Add new tasks only', update: 'Update matching tasks', new: 'Import as new' };
 
 export function ImportsView() {
-  const { imports, tasks, nav, toast, confirmBox, reloadAll } = useApp();
+  const { imports, tasks, toast, confirmBox, reloadAll } = useApp();
 
   const [appendFor, setAppendFor] = useState<{ imp: ImportRec; sheet: SheetMeta } | null>(null);
 
@@ -119,16 +120,9 @@ export function ImportsView() {
 
   return (
     <>
-      <PageHeader
-        title="Import history"
-        sub="Every workbook you have imported."
-        actions={
-          <button className="btn primary" onClick={() => nav('import')}>
-            <Upload className="size-4" /> Upload Content Excel
-          </button>
-        }
-        eyebrow="History"
-      />
+      <PageHeader title="Imports" sub="Upload a content calendar, then manage everything you have imported. Nothing is saved until you confirm." eyebrow="Admin" />
+      <ImportUploader />
+      {imports.length ? <h2 className="font-heading mt-8 mb-3 text-xl font-bold">Import history</h2> : null}
       {imports.length ? (
         <div className="stack">
           {imports.map((imp) => {
@@ -239,9 +233,7 @@ export function ImportsView() {
             );
           })}
         </div>
-      ) : (
-        <EmptyImport />
-      )}
+      ) : null}
       {appendFor && <AppendDialog imp={appendFor.imp} sheet={appendFor.sheet} onClose={() => setAppendFor(null)} />}
     </>
   );

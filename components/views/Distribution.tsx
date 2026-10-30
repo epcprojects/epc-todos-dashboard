@@ -45,7 +45,7 @@ export function Distribution() {
         title="All tasks"
         sub="Assign work and manage every task. Tick rows for bulk actions."
         actions={
-          <button className="btn primary" onClick={() => nav('import')}>
+          <button className="btn primary" onClick={() => nav('imports')}>
             <Upload className="size-4" /> Upload Content Excel
           </button>
         }

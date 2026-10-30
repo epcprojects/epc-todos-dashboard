@@ -4,10 +4,9 @@ import { UploadCloud } from 'lucide-react';
 import { norm, suggestTeam } from '@/lib/text';
 import { XLSX, type WizSheet } from '@/lib/excel';
 import { useApp } from '../store';
-import { PageHeader } from '../ui';
 import { Wizard, type Wiz } from '../Wizard';
 
-export function ImportPage() {
+export function ImportUploader() {
   const { imports } = useApp();
   const wizRef = useRef<Wiz | null>(null);
   const [, bump] = useReducer((x: number) => x + 1, 0);
@@ -57,9 +56,8 @@ export function ImportPage() {
 
   return (
     <>
-      <PageHeader title="Import content" sub="Upload your content calendar. Nothing is saved until you confirm." eyebrow="Admin" />
       <div
-        className={`drop${over ? ' over' : ''}`}
+        className={`drop${over ? ' over' : ''}${imports.length ? ' compact' : ''}`}
         id="drop"
         onDragOver={(e) => {
           e.preventDefault();
@@ -91,6 +89,7 @@ export function ImportPage() {
           or drag the file here
         </p>
       </div>
+      {!imports.length && (
       <div className="mt-5 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         {[
           ['1', 'Pick sheets', 'Tick only the worksheets that hold production work.'],
@@ -105,6 +104,7 @@ export function ImportPage() {
           </div>
         ))}
       </div>
+      )}
       {wizRef.current && <Wizard w={wizRef.current} bump={bump} close={close} />}
     </>
   );

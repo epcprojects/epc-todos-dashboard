@@ -1,5 +1,5 @@
 'use client';
-import { BarChart3, CalendarDays, ChevronsUpDown, Clapperboard, FileUp, FolderOpen, History, LayoutDashboard, ListChecks, ListTodo, LogOut, Monitor, Moon, PenTool, Settings, Sun, Users, type LucideIcon } from 'lucide-react';
+import { BarChart3, CalendarDays, ChevronsUpDown, Clapperboard, FileUp, FolderOpen, LayoutDashboard, ListChecks, ListTodo, LogOut, Monitor, Moon, PenTool, Settings, Sun, Users, type LucideIcon } from 'lucide-react';
 import { useTheme } from 'next-themes';
 import { ROLES } from '@/lib/constants';
 import { isOverdue } from '@/lib/metrics';
@@ -19,7 +19,7 @@ import { CalendarView } from './views/Calendar';
 import { Reports } from './views/Reports';
 import { ImportsView } from './views/Imports';
 import { SettingsView } from './views/Settings';
-import { ImportPage } from './views/ImportPage';
+import { BottomNav } from './BottomNav';
 import { ManageView } from './views/Manage';
 
 interface NavItem {
@@ -41,29 +41,28 @@ function useNavGroups(): NavGroup[] {
   if (role === 'admin') {
     const od = act.filter((t) => isOverdue(t, today)).length;
     return [
-      { label: 'Overview', items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, badge: od ? { n: od, bad: true } : null }] },
+      { label: 'Today', items: [{ key: 'dashboard', label: 'Today', icon: LayoutDashboard, badge: od ? { n: od, bad: true } : null }] },
       {
-        label: 'Production',
+        label: 'Work',
         items: [
-          { key: 'import', label: 'Import Content', icon: FileUp },
-          { key: 'distribution', label: 'All Tasks', icon: ListChecks, badge: { n: act.length } },
-          { key: 'designer', label: 'Graphic Design', icon: PenTool, badge: { n: open('designer') } },
-          { key: 'editor', label: 'Video Editing', icon: Clapperboard, badge: { n: open('editor') } },
-          ...customRoles.map((c): NavItem => ({ key: 'team:' + c.key, label: c.name, icon: Users, badge: { n: open(c.key) } })),
+          { key: 'designer', label: 'Design queue', icon: PenTool, badge: { n: open('designer') } },
+          { key: 'editor', label: 'Video queue', icon: Clapperboard, badge: { n: open('editor') } },
+          ...customRoles.map((c): NavItem => ({ key: 'team:' + c.key, label: `${c.name} queue`, icon: Users, badge: { n: open(c.key) } })),
+          { key: 'distribution', label: 'All tasks', icon: ListChecks, badge: { n: act.length } },
         ],
       },
       {
-        label: 'Planning',
+        label: 'Plan',
         items: [
           { key: 'calendar', label: 'Calendar', icon: CalendarDays },
           { key: 'reports', label: 'Reports', icon: BarChart3 },
         ],
       },
+      { label: 'Library', items: [{ key: 'manage', label: 'Content library', icon: FolderOpen }] },
       {
-        label: 'Workspace',
+        label: 'Admin',
         items: [
-          { key: 'imports', label: 'Import History', icon: History, badge: { n: imports.length } },
-          { key: 'manage', label: 'Content Manage', icon: FolderOpen },
+          { key: 'imports', label: 'Imports', icon: FileUp, badge: { n: imports.length } },
           { key: 'settings', label: 'Settings', icon: Settings },
         ],
       },
@@ -77,7 +76,7 @@ function useNavGroups(): NavGroup[] {
       items: [
         { key: 'team', label: 'My Tasks', icon: ListTodo, badge: od ? { n: od, bad: true } : { n: open(role) } },
         { key: 'calendar', label: 'Calendar', icon: CalendarDays },
-        { key: 'manage', label: 'Content Manage', icon: FolderOpen },
+        { key: 'manage', label: 'Content library', icon: FolderOpen },
       ],
     },
   ];
@@ -245,9 +244,6 @@ export function Shell() {
     );
   } else if (role === 'admin') {
     switch (cur) {
-      case 'import':
-        main = <ImportPage />;
-        break;
       case 'distribution':
         main = <Distribution />;
         break;
@@ -266,6 +262,7 @@ export function Shell() {
       case 'manage':
         main = <ManageView />;
         break;
+      case 'import':
       case 'imports':
         main = <ImportsView />;
         break;
@@ -298,7 +295,7 @@ export function Shell() {
             </BreadcrumbList>
           </Breadcrumb>
         </header>
-        <main id="main" className="mx-auto w-full max-w-[1500px] min-w-0 flex-1 p-4 md:p-6 lg:p-8">
+        <main id="main" className="mx-auto w-full max-w-[1500px] min-w-0 flex-1 p-4 pb-28 md:p-6 md:pb-6 lg:p-8">
           {viewAs && (
             <div className="preview-bar">
               <span>Previewing the {ROLES[viewAs]} view. Admin controls are hidden here, exactly as the team sees it.</span>
@@ -317,6 +314,7 @@ export function Shell() {
           )}
           {main}
         </main>
+        <BottomNav cur={cur} />
       </SidebarInset>
     </SidebarProvider>
   );
