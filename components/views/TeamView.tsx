@@ -1,6 +1,6 @@
 'use client';
 import { useMemo, useState } from 'react';
-import { Search, X } from 'lucide-react';
+import { Crown, Search, X } from 'lucide-react';
 import { STATUS, STATUS_KEYS, TEAMS, type Role, type Team } from '@/lib/constants';
 import { addDays, fmtDate, localDay } from '@/lib/dates';
 import { coverage, isOverdue } from '@/lib/metrics';
@@ -13,7 +13,9 @@ import { TaskTable } from '../TaskTable';
 
 export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
   const { act, today, settings, teamTab, setTeamTab, qExpand, setQExpand, teamQuick, setViewAs, nav } = useApp();
-  const list = act.filter((t) => t.team === team);
+  const mine = act.filter((t) => t.team === team);
+  const list = mine.filter((t) => !t.founder);
+  const founderList = mine.filter((t) => t.founder);
   const title = team === 'designer' ? 'Graphic Design Tasks' : team === 'editor' ? 'Video Editing Tasks' : `${TEAMS[team] || 'Team'} Tasks`;
   const key = 'team-' + team;
   const empty = (
@@ -22,7 +24,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
       {admin ? <p className="muted">Assign a sheet or tasks to this team in Task Distribution.</p> : null}
     </div>
   );
-  const tab = teamTab[team] || 'queue';
+  const tab = teamTab[team] === 'founder' && founderList.length ? 'founder' : teamTab[team] === 'table' ? 'table' : 'queue';
   const scheduledToday = list.filter((t) => t.postDate === today);
   const doneToday = list.filter((t) => localDay(t.completedAt) === today).length;
   const ip = list.filter((t) => t.status === 'in_progress').length;
@@ -51,7 +53,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
       eyebrow="Endpoint Clients"
     />
   );
-  if (!list.length && !admin)
+  if (!mine.length && !admin)
     return (
       <>
         {head}
@@ -85,15 +87,39 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
             </div>
           )}
         </div>
-        <div className="tabs" role="tablist">
-          <button role="tab" aria-selected={tab === 'queue'} onClick={() => setTeamTab(team, 'queue')}>
-            Work queue
-          </button>
-          <button role="tab" aria-selected={tab === 'table'} onClick={() => setTeamTab(team, 'table')}>
-            All tasks
-          </button>
+        <div className="tabrow">
+          <div className="tabs" role="tablist">
+            <button role="tab" aria-selected={tab === 'queue'} onClick={() => setTeamTab(team, 'queue')}>
+              Work queue
+            </button>
+            <button role="tab" aria-selected={tab === 'table'} onClick={() => setTeamTab(team, 'table')}>
+              All tasks
+            </button>
+          </div>
+          {founderList.length ? (
+            <button role="tab" className="founder-tab" aria-selected={tab === 'founder'} onClick={() => setTeamTab(team, 'founder')}>
+              <Crown className="size-4" />
+              Founder content
+              <span className="num">{founderList.filter((t) => t.status !== 'completed').length}</span>
+            </button>
+          ) : null}
         </div>
-        {tab === 'queue' ? <Queue team={team} list={list} today={today} qExpand={qExpand} setQExpand={setQExpand} /> : <TaskTable tkey={key} team={team as Team} admin={admin} empty={empty} />}
+        {tab === 'founder' ? (
+          <div className="founder-pane">
+            <div className="founder-banner">
+              <Crown className="size-5" />
+              <div>
+                <b>Founder content</b>
+                <span>Content from the founder. It is listed separately from the regular queue, so check here first.</span>
+              </div>
+            </div>
+            <Queue team={team + '-founder'} list={founderList} today={today} qExpand={qExpand} setQExpand={setQExpand} />
+          </div>
+        ) : tab === 'queue' ? (
+          <Queue team={team} list={list} today={today} qExpand={qExpand} setQExpand={setQExpand} />
+        ) : (
+          <TaskTable tkey={key} team={team as Team} admin={admin} empty={empty} />
+        )}
       </div>
     </>
   );

@@ -100,6 +100,8 @@ export const PLAT_ALIAS: Record<string, string> = {
 /** A task as the browser sees it (camelCase view of the `tasks` table). */
 export interface Task {
   id: string;
+  /** Imported from a sheet the admin marked as founder content (shown in the Founder content tab). */
+  founder: boolean;
   importId: string;
   sheetIdx: number;
   sheet: string;

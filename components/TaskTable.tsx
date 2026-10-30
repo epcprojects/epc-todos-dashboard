@@ -125,7 +125,8 @@ export function TaskTable({ tkey, team, admin, empty }: Props) {
   const st = tstate(tkey);
   const f = st.f;
 
-  const base = useMemo(() => (team ? tasks.filter((t) => t.team === team) : tasks), [tasks, team]);
+  // a team page never lists founder content here: it has its own tab
+  const base = useMemo(() => (team ? tasks.filter((t) => t.team === team && !t.founder) : tasks), [tasks, team]);
   const activeBase = useMemo(() => base.filter((t) => !t.archived), [base]);
 
   const plats = useMemo(() => uniq(base, (t) => t._plats), [base]);

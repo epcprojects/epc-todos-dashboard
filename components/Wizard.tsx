@@ -143,7 +143,7 @@ export function Wizard({ w, bump, close }: { w: Wiz; bump: () => void; close: ()
         return;
       }
       try {
-        await withRetry(() => api(`/api/imports/${importId}/rows`, { body: { sheetIdx: s.idx, reset: w.reset, ...body } }));
+        await withRetry(() => api(`/api/imports/${importId}/rows`, { body: { sheetIdx: s.idx, reset: w.reset, founder: !!s.founder, ...body } }));
       } catch (e) {
         errs += n;
         lastErr = e instanceof Error ? e.message : 'Save failed.';
@@ -526,6 +526,7 @@ export function Wizard({ w, bump, close }: { w: Wiz; bump: () => void; close: ()
                     value={s.team}
                     onChange={(e) => {
                       s.team = e.target.value as Team;
+                      if (s.team === 'admin' || s.team === 'unassigned') s.founder = false;
                       bump();
                     }}
                   >
@@ -536,6 +537,23 @@ export function Wizard({ w, bump, close }: { w: Wiz; bump: () => void; close: ()
                       </option>
                     ))}
                   </select>
+                  {s.team !== 'admin' && s.team !== 'unassigned' ? (
+                    <label className="founder-opt" htmlFor={`fd-${s.idx}`}>
+                      <input
+                        id={`fd-${s.idx}`}
+                        type="checkbox"
+                        checked={!!s.founder}
+                        onChange={(e) => {
+                          s.founder = e.target.checked;
+                          bump();
+                        }}
+                      />
+                      <span>
+                        <b>Founder content</b>
+                        <small>Shown in a separate Founder tab for {TEAMS[s.team]}</small>
+                      </span>
+                    </label>
+                  ) : null}
                 </td>
               </tr>
             ))}
@@ -589,6 +607,7 @@ export function Wizard({ w, bump, close }: { w: Wiz; bump: () => void; close: ()
               <dt>{s.name}</dt>
               <dd className="num">
                 {s.an!.data.length} rows → <b>{TEAMS[s.team]}</b>
+                {s.founder ? <span className="tag founder">Founder content</span> : null}
               </dd>
             </div>
           ))}

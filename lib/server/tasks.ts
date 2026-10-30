@@ -4,14 +4,30 @@ import { statusPatch } from '@/lib/status';
 import { iso, q, tx, type Row } from './db';
 
 /** post_date is always selected as text so it stays 'YYYY-MM-DD' and never becomes a JS Date. */
-export const TASK_COLS = `id, import_id, sheet_idx, sheet, workbook, excel_row, headers, vals, urls, column_map, date_order,
+const TASK_COLS_BASE = `id, import_id, sheet_idx, sheet, workbook, excel_row, headers, vals, urls, column_map, date_order,
   post_date::text AS post_date, post_time, post_day, platform, title, content_type, pillar, dup_key,
   team, status, blocked_reason, notes, admin_note, archived,
   created_at, imported_at, updated_at, started_at, completed_at, last_completed_at, source_updated_from, source_updated_at`;
 
+let founderCol: { ok: boolean; at: number } | null = null;
+/** True once migration 002 has been applied. A "no" is re-checked every 30 s so the app picks the column up without a restart. */
+export async function hasFounderColumn(): Promise<boolean> {
+  if (founderCol?.ok) return true;
+  if (founderCol && Date.now() - founderCol.at < 30000) return false;
+  const r = (await q(`SELECT 1 FROM information_schema.columns WHERE table_schema = current_schema() AND table_name = 'tasks' AND column_name = 'is_founder'`)) as Row[];
+  founderCol = { ok: r.length > 0, at: Date.now() };
+  return founderCol.ok;
+}
+
+/** Column list for reading tasks; founder content reads as false until the migration has been applied. */
+export async function taskCols(): Promise<string> {
+  return TASK_COLS_BASE + ((await hasFounderColumn()) ? ', is_founder' : ', false AS is_founder');
+}
+
 export function mapTask(r: Row): Task {
   return {
     id: String(r.id),
+    founder: !!r.is_founder,
     importId: String(r.import_id),
     sheetIdx: Number(r.sheet_idx),
     sheet: String(r.sheet),
@@ -97,7 +113,7 @@ export const PRUNE_DELETED = `DELETE FROM deleted_tasks WHERE deleted_at < now()
 
 export async function fetchTasks(ids: string[]): Promise<Task[]> {
   if (!ids.length) return [];
-  const rows = (await q(`SELECT ${TASK_COLS} FROM tasks WHERE id IN (SELECT jsonb_array_elements_text($1::jsonb))`, [jsonIds(ids)])) as Row[];
+  const rows = (await q(`SELECT ${await taskCols()} FROM tasks WHERE id IN (SELECT jsonb_array_elements_text($1::jsonb))`, [jsonIds(ids)])) as Row[];
   return rows.map(mapTask);
 }
 

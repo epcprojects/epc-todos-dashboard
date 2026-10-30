@@ -3,6 +3,7 @@ import { CHUNK_SIZE, TEAMS, type Team } from '@/lib/constants';
 import { requireSession } from '@/lib/server/auth';
 import { q, tx, type Row } from '@/lib/server/db';
 import { ApiError, body, handle, json } from '@/lib/server/http';
+import { hasFounderColumn } from '@/lib/server/tasks';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
@@ -26,6 +27,8 @@ const schema = z.object({
   rows: z.array(z.object(rowShape)).max(CHUNK_SIZE).default([]),
   updates: z.array(z.object({ taskId: z.string().min(1).max(200), ...rowShape })).max(CHUNK_SIZE).default([]),
   reset: z.boolean().default(false),
+  /** The admin marked this sheet as founder content on the Assign step. */
+  founder: z.boolean().default(false),
   /** "Append new rows" to an existing sheet: new task IDs get this suffix so they never collide with earlier rows. */
   appendBatch: z.string().regex(/^[a-z0-9]{3,12}$/).optional(),
   /** Column names / mapping of the file being appended (it may differ from the sheet's original upload). */
@@ -59,6 +62,12 @@ export const POST = handle(async (req: Request, ctx: { params: Promise<{ id: str
   const map = JSON.stringify(b.override ? b.override.map : sheet.column_map);
   const dateOrder = b.override ? b.override.dateOrder : String(sheet.date_order);
 
+  // Founder content needs migration 002 (tasks.is_founder). Without it, importing as founder content is refused rather than silently ignored.
+  const founderCol = await hasFounderColumn();
+  if (b.founder && !founderCol) throw new ApiError(409, 'Founder content needs a one-time database update (migrations/002_founder_content.sql). Run it in the Neon SQL Editor, then import again.');
+  // appended rows follow the sheet: they are founder content when the rest of the sheet already is
+  const founderExpr = !founderCol ? '' : b.appendBatch ? `COALESCE((SELECT bool_or(is_founder) FROM tasks WHERE import_id = $2::text AND sheet_idx = $3::int), false)` : b.founder ? 'true' : 'false';
+
   const shape = (r: (typeof b.rows)[number]) => ({
     excel_row: r.excelRow,
     vals: r.vals,
@@ -80,9 +89,9 @@ export const POST = handle(async (req: Request, ctx: { params: Promise<{ id: str
       q(
         `WITH ins AS (
            INSERT INTO tasks (id, import_id, sheet_idx, sheet, workbook, excel_row, headers, vals, urls, column_map, date_order,
-                              post_date, post_time, post_day, platform, title, content_type, pillar, dup_key, team)
+                              post_date, post_time, post_day, platform, title, content_type, pillar, dup_key, team${founderExpr ? ', is_founder' : ''})
            SELECT x.id, $2::text, $3::int, $4::text, $5::text, x.excel_row, $6::jsonb, x.vals, x.urls, $7::jsonb, $8::text, NULLIF(x.post_date, '')::date,
-                  x.post_time, x.post_day, x.platform, x.title, x.content_type, x.pillar, x.dup_key, $9::text
+                  x.post_time, x.post_day, x.platform, x.title, x.content_type, x.pillar, x.dup_key, $9::text${founderExpr ? ', ' + founderExpr : ''}
              FROM jsonb_to_recordset($1::jsonb) AS x(id text, excel_row int, vals jsonb, urls jsonb, post_date text, post_time text, post_day text,
                                                      platform text, title text, content_type text, pillar text, dup_key text)
            ON CONFLICT (id) DO NOTHING

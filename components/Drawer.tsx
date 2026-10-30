@@ -90,6 +90,7 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
         </SheetHeader>
         <div className="flex flex-col gap-5 p-5">
         <div className="row">
+          {t.founder ? <span className="tag founder">Founder content</span> : null}
           <PlatPills value={t.platform} />
           {t.type ? <span className="tag">{t.type}</span> : null}
           {t.pillar ? <span className="tag">{t.pillar}</span> : null}

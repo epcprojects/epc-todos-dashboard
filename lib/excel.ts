@@ -148,6 +148,8 @@ export interface WizSheet {
   est: number;
   selected: boolean;
   team: string;
+  /** Marked as founder content on the Assign step (only for sheets assigned to a work team). */
+  founder?: boolean;
   suggested: 'designer' | 'editor' | 'unassigned';
   grid?: Grid;
   noHeader?: boolean;

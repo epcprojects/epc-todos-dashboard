@@ -2,7 +2,7 @@ import { z } from 'zod';
 import { requireSession } from '@/lib/server/auth';
 import { iso, q, tx, type Row } from '@/lib/server/db';
 import { ApiError, handle, json } from '@/lib/server/http';
-import { mapTask, PRUNE_DELETED, TASK_COLS } from '@/lib/server/tasks';
+import { mapTask, PRUNE_DELETED, taskCols } from '@/lib/server/tasks';
 
 export const dynamic = 'force-dynamic';
 
@@ -31,8 +31,9 @@ export const GET = handle(async (req: Request) => {
     const d = new Date(parsed.since);
     if (Number.isNaN(d.getTime())) throw new ApiError(400, 'Invalid request: since must be an ISO timestamp');
     const since = d.toISOString();
+    const cols = await taskCols();
     const res = await tx([
-      q(`SELECT ${TASK_COLS} FROM tasks WHERE ${IN_SCOPE} AND updated_at > $2::timestamptz ORDER BY updated_at LIMIT ${SINCE_LIMIT + 1}`, [role, since]),
+      q(`SELECT ${cols} FROM tasks WHERE ${IN_SCOPE} AND updated_at > $2::timestamptz ORDER BY updated_at LIMIT ${SINCE_LIMIT + 1}`, [role, since]),
       // Tasks that changed but are no longer in this caller's scope (reassigned to the other team, or archived).
       q(`SELECT id FROM tasks WHERE updated_at > $2::timestamptz AND NOT ${IN_SCOPE}`, [role, since]),
       q(`SELECT task_id FROM deleted_tasks WHERE deleted_at > $2::timestamptz AND ($1::text = 'admin' OR team = $1::text)`, [role, since]),
@@ -52,8 +53,9 @@ export const GET = handle(async (req: Request) => {
   }
 
   const cursor = parsed.cursor ?? '';
+  const cols = await taskCols();
   const res = await tx([
-    q(`SELECT ${TASK_COLS} FROM tasks WHERE ${IN_SCOPE} AND id > $2 ORDER BY id LIMIT ${PAGE + 1}`, [role, cursor]),
+    q(`SELECT ${cols} FROM tasks WHERE ${IN_SCOPE} AND id > $2 ORDER BY id LIMIT ${PAGE + 1}`, [role, cursor]),
     q(`SELECT now() AS t`),
   ]);
   const rows = res[0] as Row[];

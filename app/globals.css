@@ -490,3 +490,26 @@ svg.chart .vl { fill: var(--foreground); font-size: 12px; }
   /* on a phone or narrow window the pinned Status / Details columns would cover most of the table, so they scroll with it */
   table.t th.stk-act, table.t td.stk-act, table.t th.stk-st, table.t td.stk-st { position: static; box-shadow: none; }
 }
+
+/* Founder content */
+.tag.founder { background: color-mix(in srgb, var(--primary), transparent 86%); color: var(--primary); border-color: color-mix(in srgb, var(--primary), transparent 60%); font-weight: 700; }
+.dark .tag.founder { color: color-mix(in srgb, var(--primary), #fff 25%); }
+.founder-opt { display: flex; gap: 8px; align-items: flex-start; margin-top: 8px; cursor: pointer; }
+.founder-opt input { margin-top: 3px; width: 16px; height: 16px; accent-color: var(--primary); }
+.founder-opt b { display: block; font-size: 13.5px; }
+.founder-opt small { display: block; color: var(--muted-foreground); font-size: 12.5px; }
+.tabrow { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; margin-bottom: 16px; }
+.tabrow .tabs { margin-bottom: 0; }
+.founder-tab { display: inline-flex; align-items: center; gap: 8px; height: 40px; padding: 0 16px; border-radius: var(--radius-lg); border: 1px solid color-mix(in srgb, var(--primary), transparent 55%); background: color-mix(in srgb, var(--primary), transparent 90%); color: var(--primary); font-weight: 700; font-size: 14px; cursor: pointer; transition: background .15s, box-shadow .15s; }
+.dark .founder-tab { color: color-mix(in srgb, var(--primary), #fff 25%); }
+.founder-tab:hover { background: color-mix(in srgb, var(--primary), transparent 82%); }
+.founder-tab .num { display: inline-grid; place-items: center; min-width: 22px; height: 22px; padding: 0 6px; border-radius: 999px; background: var(--primary); color: var(--primary-foreground); font-size: 12px; font-weight: 800; }
+.founder-tab[aria-selected="true"] { background: var(--primary); color: var(--primary-foreground); box-shadow: 0 4px 14px color-mix(in srgb, var(--primary), transparent 65%); }
+.founder-tab[aria-selected="true"] .num { background: var(--primary-foreground); color: var(--primary); }
+.founder-tab:focus-visible { outline: 2px solid var(--ring); outline-offset: 2px; }
+.founder-banner { display: flex; gap: 12px; align-items: center; padding: 14px 16px; margin-bottom: 18px; border-radius: var(--radius-xl); border: 1px solid color-mix(in srgb, var(--primary), transparent 55%); background: linear-gradient(90deg, color-mix(in srgb, var(--primary), transparent 86%), transparent); color: var(--primary); }
+.dark .founder-banner { color: color-mix(in srgb, var(--primary), #fff 25%); }
+.founder-banner b { display: block; font-size: 15px; color: var(--foreground); }
+.founder-banner span { font-size: 13.5px; color: var(--muted-foreground); }
+.qi.fd { box-shadow: inset 4px 0 0 var(--primary); background: color-mix(in srgb, var(--primary), transparent 95%); }
+.qi.fd.od { box-shadow: inset 4px 0 0 var(--danger); }

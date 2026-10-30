@@ -70,8 +70,8 @@ interface Ctx {
   tables: Record<string, TableState>;
   tstate: (key: string) => TableState;
   updTable: (key: string, fn: (s: TableState) => void) => void;
-  teamTab: Record<string, 'queue' | 'table'>;
-  setTeamTab: (team: string, tab: 'queue' | 'table') => void;
+  teamTab: Record<string, 'queue' | 'table' | 'founder'>;
+  setTeamTab: (team: string, tab: 'queue' | 'table' | 'founder') => void;
   qExpand: Record<string, boolean>;
   setQExpand: (k: string) => void;
   cal: { month: string | null; sel: string | null };
@@ -153,7 +153,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [activity, setActivity] = useState<HistoryEntry[]>([]);
   const [view, setViewState] = useState('dashboard');
   const [tables, setTables] = useState<Record<string, TableState>>({});
-  const [teamTab, setTeamTabState] = useState<Record<string, 'queue' | 'table'>>({});
+  const [teamTab, setTeamTabState] = useState<Record<string, 'queue' | 'table' | 'founder'>>({});
   const [qExpand, setQExpandState] = useState<Record<string, boolean>>({});
   const [cal, setCal] = useState<{ month: string | null; sel: string | null }>({ month: null, sel: null });
   const [rep, setRep] = useState<{ kind: PeriodKind; off: number }>({ kind: 'week', off: 0 });

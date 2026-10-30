@@ -120,6 +120,7 @@ CREATE TABLE IF NOT EXISTS tasks (
   notes                TEXT NOT NULL DEFAULT '',         -- production notes (team)
   admin_note           TEXT NOT NULL DEFAULT '',         -- feedback from admin to the team
   archived             BOOLEAN NOT NULL DEFAULT FALSE,
+  is_founder           BOOLEAN NOT NULL DEFAULT FALSE,   -- imported from a sheet marked as founder content
 
   created_at           TIMESTAMPTZ NOT NULL DEFAULT now(),
   imported_at          TIMESTAMPTZ NOT NULL DEFAULT now(),
@@ -138,6 +139,7 @@ CREATE INDEX IF NOT EXISTS tasks_import_idx      ON tasks (import_id, sheet_idx)
 CREATE INDEX IF NOT EXISTS tasks_dup_key_idx     ON tasks (dup_key);
 CREATE INDEX IF NOT EXISTS tasks_updated_at_idx  ON tasks (updated_at);
 CREATE INDEX IF NOT EXISTS tasks_completed_idx   ON tasks (completed_at);
+CREATE INDEX IF NOT EXISTS tasks_founder_idx     ON tasks (team) WHERE is_founder;
 
 -- ---------------------------------------------------------------------
 -- Task history: lightweight activity log

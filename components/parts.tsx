@@ -116,7 +116,7 @@ export function QItem({ t, today }: { t: CTask; today: string }) {
   const { openDrawer } = useApp();
   const sf = sched(t, today);
   return (
-    <div className={`qi ${sf.k === 'overdue' ? 'od' : ''}`}>
+    <div className={`qi ${sf.k === 'overdue' ? 'od' : ''}${t.founder ? ' fd' : ''}`}>
       <div className="d">
         {t.postDate ? fmtDate(t.postDate, { year: undefined }) : 'No date'}
         <small>
@@ -129,6 +129,7 @@ export function QItem({ t, today }: { t: CTask; today: string }) {
           {displayTitle(t)}
         </button>
         <div className="meta">
+          {t.founder ? <span className="tag founder">Founder</span> : null}
           {t.platform ? <PlatPills value={t.platform} /> : null}
           {t.type ? <span className="tag">{t.type}</span> : null}
           {t.pillar ? <span className="tag">{t.pillar}</span> : null}
