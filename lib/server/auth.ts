@@ -76,7 +76,7 @@ export async function readSettings(): Promise<SettingsRow> {
 /** Reads and verifies the session cookie, then checks the account still exists, keeps the same password version and a valid role. */
 export async function getSession(req: Request): Promise<{ session: Session; settings: SettingsRow } | null> {
   const cookie = req.headers.get('cookie') || '';
-  const m = cookie.match(new RegExp('(?:^|;\s*)' + COOKIE + '=([^;]+)'));
+  const m = cookie.match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]+)'));
   if (!m) return null;
   let payload;
   try {
