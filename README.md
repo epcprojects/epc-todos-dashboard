@@ -52,6 +52,17 @@ The app never creates or migrates tables. You create them once yourself:
 
 To let the admin create extra roles (for example "Front-end Developer") with their own PINs, run [`migrations/001_custom_roles.sql`](migrations/001_custom_roles.sql) once in the Neon SQL Editor of the database the app uses. It adds a `custom_roles` table and removes the three CHECK constraints that only allowed Designer/Editor. Until it is run, everything else works and *Settings → Team roles* shows an explanatory error when you try to create a role.
 
+### Optional: founder content and task-linked files (migrations 002 and 003)
+
+Both migrations only add things (a column and a table), are safe to run again, and are run once in the Neon SQL Editor of the database the app uses:
+
+| Migration | Adds | Feature |
+| --- | --- | --- |
+| [`002_founder_content.sql`](migrations/002_founder_content.sql) | `tasks.is_founder` | The *Founder content* checkbox on the Assign step of Content Import and the Founder content view on the team pages. |
+| [`003_file_tasks.sql`](migrations/003_file_tasks.sql) | `file_tasks` table | Attaching a Graphic Designer / Video Editor task to a picture or video in Content Manage, so its caption shows with the file. |
+
+Until a migration has been run the app keeps working: tasks read as non-founder and files show no linked task, and the action that needs the migration (importing a founder sheet, attaching a task) is refused with a message that names the file to run.
+
 ### Optional: file manager (S3)
 
 **Content Manage** is a file explorer for the bucket folder `Automation-Folder`. LinkedIn, Facebook, Instagram, TikTok and YouTube are always shown at the top level; every role can create new folders (at the top level or inside any folder), and view, download, upload, rename and delete files. Folders made in the S3 console show up too. Add four more environment variables (see `.env.example`): `AWS_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
