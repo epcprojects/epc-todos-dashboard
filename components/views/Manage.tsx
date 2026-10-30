@@ -729,7 +729,7 @@ export function ManageView() {
                       <th scope="col">Name</th>
                       <th scope="col" className="@max-3xl:hidden">Type</th>
                       <th scope="col" className="@max-3xl:hidden">Size</th>
-                      <th scope="col" className="@max-3xl:hidden">Date modified</th>
+                      <th scope="col" className="mg-capcol @max-3xl:hidden">Task &amp; caption</th>
                       <th scope="col">
                         <span className="sr">Actions</span>
                       </th>
@@ -751,20 +751,28 @@ export function ManageView() {
                               </span>
                             </span>
                           </button>
-                          <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} />
+                          <div className="@3xl:hidden">
+                            <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} />
+                          </div>
                         </td>
                         <td className="@max-3xl:hidden">{extOf(f.name).toUpperCase() || 'File'}</td>
                         <td className="num @max-3xl:hidden">{formatBytes(f.size)}</td>
-                        <td className="num @max-3xl:hidden">{fmtDT(f.lastModified)}</td>
+                        <td className="@max-3xl:hidden">
+                          <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} />
+                        </td>
                         <td>
-                          <div className="flex gap-1.5">
-                            <button className="btn sm" onClick={() => void download([f.key])} aria-label={`Download ${f.name}`} title="Download">
-                              <Download className="size-3.5 @3xl:hidden" />
-                              <span className="@max-3xl:hidden">Download</span>
-                            </button>
-                            <button className="btn sm" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
-                              <Pencil className="size-3.5" />
-                            </button>
+                          <div className="mg-actions">
+                            <div className="flex gap-1.5">
+                              <button className="btn sm" onClick={() => void download([f.key])} aria-label={`Download ${f.name}`} title="Download">
+                                <Download className="size-3.5" />
+                              </button>
+                              <button className="btn sm" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
+                                <Pencil className="size-3.5" />
+                              </button>
+                            </div>
+                            <span className="mg-modified @max-3xl:hidden" title={fmtDT(f.lastModified)}>
+                              {new Date(f.lastModified).toLocaleString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                            </span>
                           </div>
                         </td>
                       </tr>

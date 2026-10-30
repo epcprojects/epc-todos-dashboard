@@ -553,3 +553,8 @@ svg.chart .vl { fill: var(--foreground); font-size: 12px; }
 /* in the table the attached task must not widen the Name column (it fills the column instead) */
 table.t td .mg-link { width: 0; min-width: 100%; max-width: 560px; }
 table.t td .mg-chip { max-width: 100%; }
+
+/* Content Manage list: the caption has its own column; the date sits under the Download / Rename icons */
+table.t th.mg-capcol { width: 38%; min-width: 220px; }
+.mg-actions { display: flex; flex-direction: column; align-items: flex-end; gap: 6px; }
+.mg-modified { font-size: 12.5px; color: var(--muted-foreground); text-align: right; white-space: nowrap; line-height: 1.35; }
