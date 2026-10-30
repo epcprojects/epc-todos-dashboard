@@ -1,6 +1,6 @@
 'use client';
 import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, Link2, List, Pencil, Play, RefreshCw, Trash2, Upload, X } from 'lucide-react';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, mediaKind, platformOfPath, sanitizeName, type FileLink, type ManageFile, type MediaKind, type TaskOption } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
@@ -71,7 +71,7 @@ function FileBadge({ name, big }: { name: string; big?: boolean }) {
 }
 
 /** Under a picture or video: the attached task and its caption with a one-click copy, or an "Attach task" button. */
-function LinkLine({ file, link, onAttach, card }: { file: ManageFile; link?: FileLink; onAttach: () => void; card?: boolean }) {
+function LinkLine({ file, link, onAttach }: { file: ManageFile; link?: FileLink; onAttach: () => void }) {
   if (!mediaKind(file.name)) return null;
   if (!link)
     return (
@@ -88,11 +88,38 @@ function LinkLine({ file, link, onAttach, card }: { file: ManageFile; link?: Fil
       {link.caption ? (
         <div className="mg-cap-row">
           <p className="mg-caption">{link.caption}</p>
-          {card ? <CopyButton text={link.caption} className="btn sm mg-copy-wide" showLabel label="Copy caption" /> : <CopyButton text={link.caption} className="btn sm mg-copy" />}
+          <CopyButton text={link.caption} className="btn sm mg-copy" />
         </div>
       ) : (
         <p className="mg-nocap">This task has no caption.</p>
       )}
+    </div>
+  );
+}
+
+/** Grid card caption: three lines, and a "Show more" link (only when the text is really cut off) that opens the preview. */
+function CardCaption({ text, onMore }: { text: string; onMore: () => void }) {
+  const ref = useRef<HTMLParagraphElement>(null);
+  const [cut, setCut] = useState(false);
+  useLayoutEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const check = () => setCut(el.scrollHeight > el.clientHeight + 1);
+    check();
+    const ro = new ResizeObserver(check);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [text]);
+  return (
+    <div className="mg-ccap-wrap">
+      <p ref={ref} className="mg-ccap">
+        {text}
+      </p>
+      {cut ? (
+        <button type="button" className="mg-more" onClick={onMore}>
+          Show more
+        </button>
+      ) : null}
     </div>
   );
 }
@@ -813,20 +840,30 @@ export function ManageView() {
                         </label>
                       </div>
                       <div className="mg-body">
+                        {links[f.key] ? (
+                          <button type="button" className="mg-pill" onClick={() => openAttach(f)} title="Change the attached task">
+                            {links[f.key].title}
+                          </button>
+                        ) : mediaKind(f.name) ? (
+                          <button type="button" className="mg-attach" onClick={() => openAttach(f)}>
+                            <Link2 className="size-3.5" /> Attach task
+                          </button>
+                        ) : null}
                         <div className="mg-cap" title={f.name}>
                           <b>{f.name}</b>
                           <span className="muted small">
                             {formatBytes(f.size)} · {new Date(f.lastModified).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </span>
                         </div>
-                        <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} card />
+                        {links[f.key] ? links[f.key].caption ? <CardCaption text={links[f.key].caption} onMore={() => setPv(f.key)} /> : <p className="mg-nocap">This task has no caption.</p> : null}
                       </div>
                       <div className="mg-foot">
-                        <button className="btn sm flex-1" onClick={() => void download([f.key])}>
-                          <Download className="size-3.5" /> Download
+                        <button className="btn primary mg-dl" onClick={() => void download([f.key])}>
+                          <Download className="size-4" /> Download
                         </button>
-                        <button className="btn sm" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
-                          <Pencil className="size-3.5" />
+                        {links[f.key]?.caption ? <CopyButton text={links[f.key].caption} className="btn mg-copyc" showLabel label="Copy caption" /> : null}
+                        <button className="btn mg-ren" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
+                          <Pencil className="size-4" />
                         </button>
                       </div>
                     </div>
