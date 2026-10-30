@@ -60,6 +60,8 @@ export interface FileLink {
 /** A task offered in the "attach a task" dropdown. */
 export interface TaskOption {
   id: string;
+  /** not_started | in_progress | completed | blocked */
+  status: string;
   title: string;
   platform: string;
   postDate: string | null;

@@ -71,7 +71,7 @@ export function TaskPicker({ kind, value, onChange, options, id, currentTitle, p
               </button>
             </li>
             {options === null ? <li className="tp-note">Loading…</li> : null}
-            {options && !shown.length ? <li className="tp-note">{term.trim() ? 'No task matches.' : `No unfinished ${platformLabel ? platformLabel + ' ' : ''}${WHO[kind]} tasks.`}</li> : null}
+            {options && !shown.length ? <li className="tp-note">{term.trim() ? 'No task matches.' : `No ${platformLabel ? platformLabel + ' ' : ''}${WHO[kind]} tasks.`}</li> : null}
             {shown.map((o) => (
               <li key={o.id}>
                 <button
@@ -90,6 +90,7 @@ export function TaskPicker({ kind, value, onChange, options, id, currentTitle, p
                     {o.platform || 'No platform'}
                     {o.postDate ? ` · ${fmtDate(o.postDate, { year: undefined })}` : ''}
                     {o.founder ? <em className="tag founder">Founder</em> : null}
+                    {o.status === 'completed' ? <em className="tag tp-done">Completed</em> : null}
                   </span>
                 </button>
               </li>
@@ -97,6 +98,7 @@ export function TaskPicker({ kind, value, onChange, options, id, currentTitle, p
           </ul>
         </div>
       ) : null}
+      {cur && cur.status !== 'completed' ? <p className="tp-hint">This task will be marked Completed when the file is attached.</p> : null}
     </div>
   );
 }

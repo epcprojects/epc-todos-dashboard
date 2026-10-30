@@ -133,13 +133,15 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
 function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list: ReturnType<typeof useApp>['act']; today: string; qExpand: Record<string, boolean>; setQExpand: (k: string) => void }) {
   const [fq, setFq] = useState({ q: '', status: '', platform: '', pillar: '', type: '' });
   const set = (k: keyof typeof fq, v: string) => setFq((x) => ({ ...x, [k]: v }));
-  const all = list.filter((t) => t.status !== 'completed');
+  const [showDone, setShowDone] = useState(false);
+  const openAll = list.filter((t) => t.status !== 'completed');
+  const all = showDone ? list : openAll;
   const uniq = (get: (t: (typeof list)[number]) => string[]) => [...new Set(all.flatMap(get).filter(Boolean))].sort((a, b) => a.localeCompare(b));
   const plats = useMemo(() => uniq((t) => splitPlat(t.platform)), [all]); // eslint-disable-line react-hooks/exhaustive-deps
   const pillars = useMemo(() => uniq((t) => [t.pillar]), [all]); // eslint-disable-line react-hooks/exhaustive-deps
   const types = useMemo(() => uniq((t) => [t.type]), [all]); // eslint-disable-line react-hooks/exhaustive-deps
   const term = fq.q.trim().toLowerCase();
-  const open = all.filter(
+  const matched = all.filter(
     (t) =>
       (!term || [t.title, t.platform, t.pillar, t.type].some((x) => String(x || '').toLowerCase().includes(term))) &&
       (!fq.status || t.status === fq.status) &&
@@ -147,6 +149,8 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
       (!fq.pillar || t.pillar === fq.pillar) &&
       (!fq.type || t.type === fq.type),
   );
+  const open = matched.filter((t) => t.status !== 'completed');
+  const doneList = showDone ? matched.filter((t) => t.status === 'completed').sort((a, b) => (b.postDate || '').localeCompare(a.postDate || '')) : [];
   const filtered = !!(fq.q || fq.status || fq.platform || fq.pillar || fq.type);
   const secs: [string, string, (t: (typeof list)[number]) => boolean][] = [
     ['Overdue', 'overdue', (t) => !!t.postDate && t.postDate < today],
@@ -156,7 +160,18 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
     ['No posting date', 'nodate', (t) => !t.postDate],
   ];
   const cmp = prioCmp(today);
-  if (!all.length) return <div className="okbox">Every assigned task is completed. Nice work.</div>;
+  const showDoneBox = (
+    <label className="chk-inline">
+      <input type="checkbox" checked={showDone} onChange={(e) => setShowDone(e.target.checked)} /> Show completed
+    </label>
+  );
+  if (!openAll.length && !showDone)
+    return (
+      <div className="queue">
+        <div className="okbox">Every assigned task is completed. Nice work.</div>
+        <div className="mt-3">{showDoneBox}</div>
+      </div>
+    );
   const sel = (label: string, k: keyof typeof fq, allLabel: string, vals: string[]) => (
     <label className="field">
       <span>{label}</span>
@@ -181,8 +196,8 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
         <label className="field">
           <span>Status</span>
           <select className="inp" value={fq.status} onChange={(e) => set('status', e.target.value)}>
-            <option value="">All open statuses</option>
-            {STATUS_KEYS.filter((k) => k !== 'completed').map((k) => (
+            <option value="">{showDone ? 'All statuses' : 'All open statuses'}</option>
+            {STATUS_KEYS.filter((k) => showDone || k !== 'completed').map((k) => (
               <option key={k} value={k}>
                 {STATUS[k]}
               </option>
@@ -192,13 +207,14 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
         {sel('Platform', 'platform', 'All platforms', plats)}
         {sel('Content pillar', 'pillar', 'All pillars', pillars)}
         {sel('Type', 'type', 'All types', types)}
+        {showDoneBox}
         {filtered ? (
           <button className="btn" onClick={() => setFq({ q: '', status: '', platform: '', pillar: '', type: '' })}>
             <X className="size-4" /> Clear filters
           </button>
         ) : null}
       </div>
-      {filtered && !open.length ? <p className="muted">No open tasks match these filters.</p> : null}
+      {filtered && !open.length && !doneList.length ? <p className="muted">No tasks match these filters.</p> : null}
       {secs.map(([label, k, fn]) => {
         const l = open.filter(fn).sort(cmp);
         if (!l.length && (k === 'nodate' || filtered)) return null;
@@ -218,6 +234,19 @@ function Queue({ team, list, today, qExpand, setQExpand }: { team: string; list:
           </section>
         );
       })}
+      {doneList.length ? (
+        <section className="sec">
+          <h3>
+            Completed <span className="pill fl-later num">{doneList.length}</span>
+          </h3>
+          <div className="qlist">{doneList.slice(0, qExpand[team + 'done'] ? doneList.length : 12).map((t) => <QItem key={t.id} t={t} today={today} />)}</div>
+          {doneList.length > 12 && !qExpand[team + 'done'] ? (
+            <button className="btn sm mt-2" onClick={() => setQExpand(team + 'done')}>
+              Show all {doneList.length}
+            </button>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -79,17 +79,18 @@ export async function moveLink(from: string, to: string) {
   }
 }
 
-/** Unfinished tasks of one team for the dropdown, earliest posting date first. */
+/** Tasks of one team for the dropdown (completed ones too), earliest posting date first. */
 export async function taskOptions(team: string): Promise<TaskOption[]> {
   const founder = (await hasFounderColumn()) ? 'is_founder' : 'false';
   const rows = (await q(
-    `SELECT id, title, platform, post_date::text AS post_date, ${founder} AS founder, vals
-       FROM tasks WHERE team = $1 AND status <> 'completed' AND NOT archived
+    `SELECT id, status, title, platform, post_date::text AS post_date, ${founder} AS founder, vals
+       FROM tasks WHERE team = $1 AND NOT archived
       ORDER BY post_date NULLS LAST, title LIMIT 3000`,
     [team],
   )) as Row[];
   return rows.map((r) => ({
     id: String(r.id),
+    status: String(r.status),
     title: String(r.title || '') || ((r.vals as string[]) || []).find((x) => x && x.length > 3 && !/^https?:\/\//i.test(x))?.slice(0, 90) || 'Task',
     platform: String(r.platform ?? ''),
     postDate: r.post_date ? String(r.post_date) : null,

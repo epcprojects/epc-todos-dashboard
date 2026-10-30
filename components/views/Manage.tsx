@@ -1,5 +1,5 @@
 'use client';
-import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, Link2, List, Pencil, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, Link2, List, Pencil, Play, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, mediaKind, platformOfPath, sanitizeName, type FileLink, type ManageFile, type MediaKind, type TaskOption } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
@@ -71,7 +71,7 @@ function FileBadge({ name, big }: { name: string; big?: boolean }) {
 }
 
 /** Under a picture or video: the attached task and its caption with a one-click copy, or an "Attach task" button. */
-function LinkLine({ file, link, onAttach }: { file: ManageFile; link?: FileLink; onAttach: () => void }) {
+function LinkLine({ file, link, onAttach, card }: { file: ManageFile; link?: FileLink; onAttach: () => void; card?: boolean }) {
   if (!mediaKind(file.name)) return null;
   if (!link)
     return (
@@ -88,7 +88,7 @@ function LinkLine({ file, link, onAttach }: { file: ManageFile; link?: FileLink;
       {link.caption ? (
         <div className="mg-cap-row">
           <p className="mg-caption">{link.caption}</p>
-          <CopyButton text={link.caption} className="btn sm mg-copy" />
+          {card ? <CopyButton text={link.caption} className="btn sm mg-copy-wide" showLabel label="Copy caption" /> : <CopyButton text={link.caption} className="btn sm mg-copy" />}
         </div>
       ) : (
         <p className="mg-nocap">This task has no caption.</p>
@@ -454,6 +454,7 @@ export function ManageView() {
     }
     let next = 0;
     let done = 0;
+    let completedTasks = 0;
     const worker = async () => {
       while (next < queue.length) {
         const { item, target } = queue[next++];
@@ -465,7 +466,8 @@ export function ManageView() {
           const tid = go?.attach[item.idx];
           if (tid) {
             try {
-              await api('/api/manage/link', { body: { key: target.key, taskId: tid } });
+              const lr = await api<{ completed?: boolean }>('/api/manage/link', { body: { key: target.key, taskId: tid } });
+              if (lr.completed) completedTasks++;
             } catch (e) {
               toast(`${item.file.name} was uploaded, but its task could not be attached: ${e instanceof Error ? e.message : 'unknown error'}`, 'bad');
             }
@@ -476,7 +478,7 @@ export function ManageView() {
       }
     };
     await Promise.all(Array.from({ length: Math.min(CONCURRENCY, queue.length) }, worker));
-    if (queue.length) toast(done === queue.length ? `Uploaded ${done} ${done === 1 ? 'file' : 'files'}` : `Uploaded ${done} of ${queue.length} files`, done === queue.length ? undefined : 'bad');
+    if (queue.length) toast((done === queue.length ? `Uploaded ${done} ${done === 1 ? 'file' : 'files'}` : `Uploaded ${done} of ${queue.length} files`) + (completedTasks ? ` · ${completedTasks} ${completedTasks === 1 ? 'task' : 'tasks'} marked completed` : ''), done === queue.length ? undefined : 'bad');
     await load();
   };
 
@@ -537,8 +539,8 @@ export function ManageView() {
     if (!attach.had && !attach.value) return setAttach(null);
     setAttach({ ...attach, busy: true, error: '' });
     try {
-      await api('/api/manage/link', { body: { key: attach.file.key, taskId: attach.value } });
-      toast(attach.value ? 'Task attached' : 'Task removed from the file');
+      const lr = await api<{ completed?: boolean }>('/api/manage/link', { body: { key: attach.file.key, taskId: attach.value } });
+      toast(attach.value ? (lr.completed ? 'Task attached and marked completed' : 'Task attached') : 'Task removed from the file');
       setAttach(null);
       await load();
     } catch (e) {
@@ -787,29 +789,41 @@ export function ManageView() {
                   const url = thumbs[f.key];
                   return (
                     <div key={f.key} className={`mg-card${sel.has(f.key) ? ' sel' : ''}`}>
-                      <label className="mg-check">
-                        <input type="checkbox" aria-label={`Select ${f.name}`} checked={sel.has(f.key)} onChange={() => toggle(f.key)} />
-                      </label>
-                      <button className="mg-thumb w-full" onClick={() => setPv(f.key)} aria-label={`Preview ${f.name}`}>
-                        {url && IMAGE_EXTENSIONS.includes(e) ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={url} alt="" loading="lazy" />
-                        ) : url && VIDEO_EXTENSIONS.includes(e) ? (
-                          <video src={url + '#t=0.1'} preload="metadata" muted playsInline />
-                        ) : (
-                          <FileBadge name={f.name} big />
-                        )}
-                      </button>
-                      <div className="mg-cap" title={f.name}>
-                        <b>{f.name}</b>
-                        <span className="muted small">
-                          {formatBytes(f.size)} · {new Date(f.lastModified).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
-                        </span>
+                      <div className="mg-media">
+                        <button className="mg-thumb" onClick={() => setPv(f.key)} aria-label={`Preview ${f.name}`}>
+                          {url && IMAGE_EXTENSIONS.includes(e) ? (
+                            // eslint-disable-next-line @next/next/no-img-element
+                            <img src={url} alt="" loading="lazy" />
+                          ) : url && VIDEO_EXTENSIONS.includes(e) ? (
+                            <video src={url + '#t=0.1'} preload="metadata" muted playsInline />
+                          ) : (
+                            <span className="mg-fallback">
+                              <FileBadge name={f.name} big />
+                            </span>
+                          )}
+                          {mediaKind(f.name) === 'video' ? (
+                            <span className="mg-play" aria-hidden="true">
+                              <Play className="size-5" fill="currentColor" />
+                            </span>
+                          ) : null}
+                          <span className="mg-kind">{e.toUpperCase() || 'FILE'}</span>
+                        </button>
+                        <label className="mg-check">
+                          <input type="checkbox" aria-label={`Select ${f.name}`} checked={sel.has(f.key)} onChange={() => toggle(f.key)} />
+                        </label>
                       </div>
-                      <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} />
-                      <div className="flex gap-1.5">
+                      <div className="mg-body">
+                        <div className="mg-cap" title={f.name}>
+                          <b>{f.name}</b>
+                          <span className="muted small">
+                            {formatBytes(f.size)} · {new Date(f.lastModified).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        </div>
+                        <LinkLine file={f} link={links[f.key]} onAttach={() => openAttach(f)} card />
+                      </div>
+                      <div className="mg-foot">
                         <button className="btn sm flex-1" onClick={() => void download([f.key])}>
-                          Download
+                          <Download className="size-3.5" /> Download
                         </button>
                         <button className="btn sm" onClick={() => startRename(f)} aria-label={`Rename ${f.name}`} title="Rename">
                           <Pencil className="size-3.5" />
@@ -930,7 +944,7 @@ export function ManageView() {
                 Replace {pend.names.length === 1 ? 'it' : 'them'} or keep both?
               </>
             ) : (
-              'Optionally attach a task to each picture or video. Its caption then shows with the file.'
+              'Optionally attach a task to each picture or video. Its caption then shows with the file, and the task is marked completed.'
             )}
           </DialogDescription>
           {pend && pend.names.length ? (
@@ -993,7 +1007,7 @@ export function ManageView() {
           <DialogDescription className="text-sm break-all">
             {attach ? (
               <>
-                {attach.kind === 'image' ? 'A Graphic Designer task' : 'A Video Editor task'} for <b className="text-foreground">{attach.file.name}</b>. Its caption shows with the file.
+                {attach.kind === 'image' ? 'A Graphic Designer task' : 'A Video Editor task'} for <b className="text-foreground">{attach.file.name}</b>. Its caption shows with the file, and the task is marked completed.
               </>
             ) : null}
           </DialogDescription>
