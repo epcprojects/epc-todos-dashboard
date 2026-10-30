@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
-import { Eye, KeyRound, Pencil, Trash2, UserPlus } from 'lucide-react';
-import { ROLES, type BaseRole, type Role } from '@/lib/constants';
+import { Eye, Pencil, Trash2, UserPlus } from 'lucide-react';
+import { ROLES, type Role } from '@/lib/constants';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
@@ -9,8 +9,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Switch } from '@/components/ui/switch';
 import { useApp } from '../store';
-
-const BASE: BaseRole[] = ['admin', 'designer', 'editor'];
+import { UsersSection } from './UsersSection';
 
 /** Settings layout: the section title and explanation on the left, the controls on the right. */
 function Section({ title, desc, children }: { title: string; desc: React.ReactNode; children: React.ReactNode }) {
@@ -25,36 +24,11 @@ function Section({ title, desc, children }: { title: string; desc: React.ReactNo
   );
 }
 
-function PinRow({ label, isSet, value, onChange, onSave, id, extra }: { label: string; isSet: boolean; value: string; onChange: (v: string) => void; onSave: () => void; id: string; extra?: React.ReactNode }) {
-  return (
-    <div className="flex flex-wrap items-center gap-3 px-4 py-3">
-      <div className="min-w-44 flex-1">
-        <div className="flex items-center gap-2 text-sm font-medium">
-          {label}
-          <Badge variant={isSet ? 'secondary' : 'outline'} className={isSet ? 'bg-success-soft text-success' : 'text-muted-foreground'}>
-            {isSet ? 'PIN set' : 'No PIN'}
-          </Badge>
-        </div>
-      </div>
-      <Label htmlFor={id} className="sr-only">
-        New PIN for {label}
-      </Label>
-      <Input id={id} type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" placeholder="New PIN (4–8 digits)" value={value} onChange={(e) => onChange(e.target.value)} className="h-9 w-44 text-sm" />
-      <Button variant={isSet ? 'outline' : 'default'} size="lg" onClick={onSave}>
-        <KeyRound /> {isSet ? 'Change PIN' : 'Set PIN'}
-      </Button>
-      {extra}
-    </div>
-  );
-}
-
 export function SettingsView() {
-  const { settings, saveSettings, savePin, confirmBox, toast, setViewAs, nav, customRoles, createRole, renameRole, deleteRole } = useApp();
+  const { settings, saveSettings, confirmBox, toast, setViewAs, nav, customRoles, createRole, renameRole, deleteRole } = useApp();
   const tgt = +settings.targetBuffer || 7;
   const [custom, setCustom] = useState<string | null>(null);
-  const [pins, setPins] = useState<Record<string, string>>({});
   const [newName, setNewName] = useState('');
-  const [newPin, setNewPin] = useState('');
   const [renaming, setRenaming] = useState<Record<string, string>>({});
 
   const commitCustom = () => {
@@ -64,36 +38,16 @@ export function SettingsView() {
     if (n >= 1 && n <= 60 && n !== tgt) void saveSettings({ targetBuffer: n });
   };
 
-  const hasPin = (r: Role) => (r === 'admin' || r === 'designer' || r === 'editor' ? settings.pins[r] : !!customRoles.find((c) => c.key === r)?.hasPin);
-
-  const save = async (r: Role) => {
-    const v = (pins[r] || '').trim();
-    if (!/^\d{4,8}$/.test(v)) return toast('Use 4 to 8 digits for the PIN.', 'bad');
-    if (hasPin(r)) {
-      const ok = await confirmBox({
-        title: `Change the ${ROLES[r]} PIN?`,
-        body: `Everyone logged in as ${ROLES[r]} will be logged out and must use the new PIN.${r === 'admin' ? ' You will stay logged in on this browser.' : ''}`,
-        ok: 'Change PIN',
-      });
-      if (!ok) return;
-    }
-    if (await savePin(r, v)) setPins((p) => ({ ...p, [r]: '' }));
-  };
-
   const add = async () => {
     const name = newName.trim();
     if (name.length < 2) return toast('Give the role a name (at least 2 characters).', 'bad');
-    if (!/^\d{4,8}$/.test(newPin.trim())) return toast('Use 4 to 8 digits for the PIN.', 'bad');
-    if (await createRole(name, newPin.trim())) {
-      setNewName('');
-      setNewPin('');
-    }
+    if (await createRole(name)) setNewName('');
   };
 
   const remove = async (key: string) => {
     const ok = await confirmBox({
       title: `Delete the ${ROLES[key]} role?`,
-      body: 'Its PIN stops working and anyone logged in with it is logged out. A role can only be deleted when no task is assigned to it.',
+      body: 'Users with this role can no longer log in until you give them another role. A role can only be deleted when no task is assigned to it.',
       ok: 'Delete role',
       danger: true,
     });
@@ -140,32 +94,21 @@ export function SettingsView() {
           </Card>
         </Section>
 
-        <Section title="Access PINs" desc="Everyone opens the same link and logs in by choosing a role and entering its PIN. Changing a PIN logs out everyone using that role. This is simple access separation for an internal tool, not strong security.">
-          <Card className="gap-0 divide-y py-0">
-            {BASE.map((r) => (
-              <PinRow key={r} id={`pin-${r}`} label={ROLES[r]} isSet={settings.pins[r]} value={pins[r] || ''} onChange={(v) => setPins((p) => ({ ...p, [r]: v }))} onSave={() => void save(r)} />
-            ))}
-          </Card>
+        <Section title="Users" desc="Everyone logs in with their own username and password. You choose each person's role: Admin sees everything, other roles see only their own tasks. A new password logs that person out everywhere.">
+          <UsersSection />
         </Section>
 
-        <Section title="Team roles" desc="Add roles such as a Front-end Developer, each with its own PIN. A role works like Graphic Designer or Video Editor: assign sheets or tasks to it and its members see only those tasks.">
+        <Section title="Team roles" desc="Add roles such as a Front-end Developer, then give them to users above. A role works like Graphic Designer or Video Editor: assign sheets or tasks to it and its members see only those tasks.">
           <Card className="gap-0 divide-y py-0">
             {customRoles.length ? (
               customRoles.map((r) => (
                 <div key={r.key}>
-                  <PinRow
-                    id={`pin-${r.key}`}
-                    label={r.name}
-                    isSet={r.hasPin}
-                    value={pins[r.key] || ''}
-                    onChange={(v) => setPins((p) => ({ ...p, [r.key]: v }))}
-                    onSave={() => void save(r.key)}
-                    extra={
-                      <Button variant="destructive" size="lg" onClick={() => void remove(r.key)}>
-                        <Trash2 /> Delete
-                      </Button>
-                    }
-                  />
+                  <div className="flex flex-wrap items-center justify-between gap-3 px-4 py-3.5">
+                    <span className="font-semibold">{r.name}</span>
+                    <Button variant="destructive" size="lg" onClick={() => void remove(r.key)}>
+                      <Trash2 /> Delete
+                    </Button>
+                  </div>
                   <div className="flex flex-wrap items-center gap-3 border-t border-dashed px-4 py-3">
                     <Label htmlFor={`rname-${r.key}`} className="text-[13px] text-muted-foreground">
                       Rename
@@ -193,12 +136,6 @@ export function SettingsView() {
                   New role name
                 </Label>
                 <Input id="new-role-name" maxLength={40} placeholder="e.g. Front-end Developer" value={newName} onChange={(e) => setNewName(e.target.value)} className="h-9 w-60 text-sm" />
-              </div>
-              <div className="grid gap-1.5">
-                <Label htmlFor="new-role-pin" className="text-[13px] text-muted-foreground">
-                  PIN (4–8 digits)
-                </Label>
-                <Input id="new-role-pin" type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" value={newPin} onChange={(e) => setNewPin(e.target.value)} className="h-9 w-40 text-sm" />
               </div>
               <Button size="lg" onClick={() => void add()}>
                 <UserPlus /> Create role

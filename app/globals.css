@@ -743,3 +743,12 @@ h1, h2, h3, .font-heading { letter-spacing: -0.02em; font-weight: 700; }
 
 /* tables: small mono caps headers, as in the Runway design */
 table.t th, table.cmp th { font-family: var(--font-mono-ui), ui-monospace, monospace; font-size: 11.5px; font-weight: 500; letter-spacing: .08em; text-transform: uppercase; color: var(--ink-3); }
+
+/* ===== sign-in: identical in light and dark ===== */
+.login-bg { background-color: #120b2b; background-image: radial-gradient(900px 700px at 0% 20%, #3b1fa0 0%, transparent 60%), radial-gradient(900px 800px at 100% 0%, #5230c8 0%, transparent 55%), radial-gradient(1100px 700px at 85% 100%, #8f80f6 0%, transparent 60%), radial-gradient(800px 600px at 10% 100%, #170f35 0%, transparent 70%); }
+.login-tile { background: linear-gradient(160deg, #1a1033 0%, #6f45f0 85%, #b79bff 100%); border: 1px solid rgb(255 255 255 / .35); box-shadow: 0 30px 60px -10px rgb(150 100 255 / .55), 0 0 0 1px rgb(255 255 255 / .12) inset; }
+.login-card { background: rgb(150 130 255 / .24); border: 1px solid rgb(255 255 255 / .22); box-shadow: 0 30px 80px -30px rgb(10 0 40 / .6); backdrop-filter: blur(22px) saturate(140%); -webkit-backdrop-filter: blur(22px) saturate(140%); }
+.login-input { width: 100%; height: 56px; border-radius: 12px; background: rgb(30 18 70 / .6); border: 1px solid transparent; color: #fff; padding: 0 18px; font-size: 17px; outline: none; }
+.login-input::placeholder { color: rgb(255 255 255 / .62); }
+.login-input:focus-visible { border-color: #fff; box-shadow: 0 0 0 3px rgb(255 255 255 / .25); }
+@media (prefers-reduced-transparency: reduce) { .login-card { background: #3b2a8a; backdrop-filter: none; } }

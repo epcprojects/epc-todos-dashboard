@@ -1,193 +1,75 @@
 'use client';
-import { useEffect, useState } from 'react';
-import { CalendarCheck, FolderOpen, KeyRound, LineChart, ShieldCheck } from 'lucide-react';
-import { ROLES, type Role } from '@/lib/constants';
-import { lsGet } from '@/lib/client/api';
-import { Button } from '@/components/ui/button';
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
-import { Input } from '@/components/ui/input';
-import { Label } from '@/components/ui/label';
+import { useState } from 'react';
+import { Eye, EyeOff } from 'lucide-react';
+import { EpcMark } from '../EpcMark';
 import { useApp } from '../store';
 
-const POINTS = [
-  { icon: CalendarCheck, title: 'Always know where you stand', text: 'Coverage, overdue work and today’s progress in one view.' },
-  { icon: LineChart, title: 'Built for two teams, ready for more', text: 'Designers, editors and any role you add see only their own queue.' },
-  { icon: FolderOpen, title: 'Every asset in one place', text: 'Browse and upload to the shared media library.' },
-];
-
-import { EpcMark } from '../EpcMark';
-
-function Brand({ light }: { light?: boolean }) {
-  return (
-    <div className="flex items-center gap-2.5">
-      <EpcMark className="size-10" white={light} />
-      <div className="leading-tight">
-        <div className={`text-lg font-extrabold tracking-tight ${light ? 'text-white' : ''}`}>
-          Endpoint <span className={light ? 'text-white/70' : 'text-primary'}>Clients</span>
-        </div>
-        <div className={`text-xs ${light ? 'text-white/70' : 'text-muted-foreground'}`}>Social Media Production Dashboard</div>
-      </div>
-    </div>
-  );
-}
-
+/** One look for both themes: a glass card over a violet gradient, so the sign-in screen never changes with light/dark mode. */
 export function LoginView() {
-  const { info, login, setup, toast } = useApp();
-  const [role, setRole] = useState<Role>('designer');
-  const [pin, setPin] = useState('');
-  const [pin2, setPin2] = useState('');
-  const [name, setName] = useState('');
+  const { login } = useApp();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
   const [err, setErr] = useState('');
   const [busy, setBusy] = useState(false);
+  const [forgot, setForgot] = useState(false);
 
-  useEffect(() => setName(lsGet('epc.name', '')), []);
-
-  const isSetup = info.setupNeeded;
-  const has = role === 'admin' || role === 'designer' || role === 'editor' ? info.pins[role] : !!info.roles.find((c) => c.key === role)?.hasPin;
-
-  const saveSetup = async () => {
-    const a = pin.trim();
-    if (!/^\d{4,8}$/.test(a)) return toast('Use 4 to 8 digits for the PIN.', 'bad');
-    if (a !== pin2.trim()) return toast('The two PINs do not match.', 'bad');
-    setBusy(true);
-    const e = await setup(a, name.trim().slice(0, 40));
-    setBusy(false);
-    if (e) toast(e, 'bad');
-  };
   const submit = async () => {
+    if (busy) return;
     setBusy(true);
     setErr('');
-    const e = await login(role, pin, name.trim().slice(0, 40));
+    const e = await login(username.trim(), password);
     setBusy(false);
     if (e) {
       setErr(e);
-      setPin('');
+      setPassword('');
     }
   };
 
   return (
-    <div className="grid min-h-screen lg:grid-cols-[1.05fr_1fr]">
-      {/* brand panel */}
-      <div className="relative hidden overflow-hidden bg-[#3a31b8] p-12 text-white lg:flex lg:flex-col lg:justify-between" style={{ backgroundImage: 'radial-gradient(1200px 600px at 0% 0%, #5a50e0 0%, transparent 60%), radial-gradient(900px 500px at 100% 100%, #1f1a6e 0%, transparent 60%)' }}>
-        <div aria-hidden="true" className="pointer-events-none absolute -right-24 -bottom-24 size-[420px] rounded-[3rem] border border-white/10 bg-white/[0.04] rotate-12" />
-        <div aria-hidden="true" className="pointer-events-none absolute -right-8 -bottom-8 size-[320px] rounded-[2.5rem] border border-white/10 bg-white/[0.05] rotate-12" />
-        <div aria-hidden="true" className="pointer-events-none absolute right-10 bottom-10 size-[220px] rounded-[2rem] border border-white/10 bg-white/[0.07] rotate-12" />
-        <Brand light />
-        <div className="relative max-w-md">
-          <h1 className="text-4xl leading-tight font-extrabold tracking-tight text-balance">Production that stays ahead of the calendar.</h1>
-          <p className="mt-4 text-base leading-relaxed text-white/75">Plan, assign and track every post and video from one place, so the content is ready before it needs to go live.</p>
-          <ul className="mt-8 space-y-5">
-            {POINTS.map((p) => (
-              <li key={p.title} className="flex gap-3">
-                <span className="mt-0.5 grid size-9 shrink-0 place-items-center rounded-lg bg-white/10 ring-1 ring-white/15">
-                  <p.icon className="size-[18px]" />
-                </span>
-                <span>
-                  <span className="block text-[15px] font-bold">{p.title}</span>
-                  <span className="block text-sm text-white/70">{p.text}</span>
-                </span>
-              </li>
-            ))}
-          </ul>
+    <div className="login-bg relative grid min-h-screen place-items-center overflow-hidden px-5 py-10 text-white">
+      <div className="relative z-10 flex w-full max-w-[460px] flex-col items-center">
+        <div className="login-tile mb-12 grid size-[84px] place-items-center rounded-[22px]">
+          <EpcMark className="size-12" white />
         </div>
-        <p className="relative text-sm text-white/55">Endpoint Clients · Global UI/UX Design Agency</p>
-      </div>
-
-      {/* form panel */}
-      <div className="flex flex-col items-center justify-center p-6 sm:p-10">
-        <div className="mb-8 lg:hidden">
-          <Brand />
-        </div>
-        <Card className="w-full max-w-[440px] shadow-lg ring-1 ring-border">
-          <CardHeader className="gap-1.5 pb-2">
-            <div className="mb-1 grid size-10 place-items-center rounded-xl bg-accent text-accent-foreground">{isSetup ? <ShieldCheck className="size-5" /> : <KeyRound className="size-5" />}</div>
-            <CardTitle className="text-xl font-extrabold tracking-tight">{isSetup ? 'Set up dashboard access' : 'Welcome back'}</CardTitle>
-            <CardDescription className="text-sm">
-              {isSetup ? 'Choose an Admin PIN. You will set the Designer and Editor PINs afterwards in Settings.' : 'Choose your role and enter its PIN to continue.'}
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            {isSetup ? (
-              <form
-                className="grid gap-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  void saveSetup();
-                }}
-              >
-                <div className="grid gap-1.5">
-                  <Label htmlFor="setup-pin">Admin PIN (4 to 8 digits)</Label>
-                  <Input id="setup-pin" type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" value={pin} onChange={(e) => setPin(e.target.value)} className="h-10 text-base" />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="setup-pin2">Repeat Admin PIN</Label>
-                  <Input id="setup-pin2" type="password" inputMode="numeric" maxLength={8} autoComplete="new-password" value={pin2} onChange={(e) => setPin2(e.target.value)} className="h-10 text-base" />
-                </div>
-                <div className="grid gap-1.5">
-                  <Label htmlFor="login-name">Your name</Label>
-                  <Input id="login-name" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder="Shown in activity history" className="h-10 text-base" />
-                </div>
-                <Button type="submit" size="lg" className="h-10 w-full text-sm font-bold" disabled={busy}>
-                  Save Admin PIN and log in
-                </Button>
-              </form>
-            ) : (
-              <form
-                id="login-form"
-                className="grid gap-4"
-                onSubmit={(e) => {
-                  e.preventDefault();
-                  if (has) void submit();
-                }}
-              >
-                <div className="grid gap-1.5">
-                  <Label>I am the</Label>
-                  <div className="flex flex-wrap gap-2" role="radiogroup" aria-label="Role">
-                    {(['designer', 'editor', ...info.roles.map((c) => c.key), 'admin'] as Role[]).map((r) => (
-                      <button
-                        key={r}
-                        type="button"
-                        role="radio"
-                        aria-checked={role === r}
-                        onClick={() => {
-                          setRole(r);
-                          setErr('');
-                          setPin('');
-                        }}
-                        className={`rounded-full border px-3.5 py-1.5 text-sm font-semibold transition-colors ${role === r ? 'border-primary bg-primary text-primary-foreground shadow-sm' : 'border-input bg-card hover:bg-muted'}`}
-                      >
-                        {ROLES[r]}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-                {has ? (
-                  <>
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="login-pin">{ROLES[role]} PIN</Label>
-                      <Input id="login-pin" type="password" inputMode="numeric" maxLength={8} autoComplete="current-password" autoFocus value={pin} onChange={(e) => setPin(e.target.value)} className="h-10 text-base tracking-widest" />
-                    </div>
-                    <div className="grid gap-1.5">
-                      <Label htmlFor="login-name">Your name</Label>
-                      <Input id="login-name" maxLength={40} value={name} onChange={(e) => setName(e.target.value)} placeholder="Shown in activity history" className="h-10 text-base" />
-                    </div>
-                    <Button type="submit" size="lg" className="h-10 w-full text-sm font-bold" disabled={busy}>
-                      Log in
-                    </Button>
-                  </>
-                ) : (
-                  <div className="warnbox">No PIN has been set for {ROLES[role]} yet. Ask the admin to set one in Settings → Access PINs.</div>
-                )}
-                {err ? (
-                  <div className="err" role="alert">
-                    {err}
-                  </div>
-                ) : null}
-              </form>
-            )}
-          </CardContent>
-        </Card>
-        <p className="mt-6 text-center text-xs text-muted-foreground">Everyone uses the same link. Your PIN decides what you can see and do.</p>
+        <form
+          className="login-card w-full rounded-[32px] p-7 sm:p-9"
+          onSubmit={(e) => {
+            e.preventDefault();
+            void submit();
+          }}
+        >
+          <h1 className="mb-6 text-center text-[26px] font-medium tracking-tight">
+            Welcome back <span aria-hidden="true">👋</span>
+          </h1>
+          <label htmlFor="login-user" className="mb-2 block text-[15px] text-white/90">
+            Username <span className="text-[#ff6b6b]" aria-hidden="true">*</span>
+          </label>
+          <input id="login-user" className="login-input mb-5" autoComplete="username" autoCapitalize="none" spellCheck={false} autoFocus placeholder="Enter username" value={username} onChange={(e) => setUsername(e.target.value)} />
+          <label htmlFor="login-pass" className="mb-2 block text-[15px] text-white/90">
+            Password <span className="text-[#ff6b6b]" aria-hidden="true">*</span>
+          </label>
+          <div className="relative mb-4">
+            <input id="login-pass" className="login-input pr-12" type={show ? 'text' : 'password'} autoComplete="current-password" placeholder="Enter password" value={password} onChange={(e) => setPassword(e.target.value)} />
+            <button type="button" onClick={() => setShow((v) => !v)} aria-label={show ? 'Hide password' : 'Show password'} aria-pressed={show} className="absolute top-1/2 right-2 grid size-10 -translate-y-1/2 place-items-center rounded-lg text-white/80 hover:text-white">
+              {show ? <EyeOff className="size-5" /> : <Eye className="size-5" />}
+            </button>
+          </div>
+          {err ? (
+            <div role="alert" className="mb-3 rounded-xl bg-[#ff6b6b]/15 px-3.5 py-2.5 text-sm font-medium text-[#ffd0d0] ring-1 ring-[#ff6b6b]/40">
+              {err}
+            </div>
+          ) : null}
+          <button type="submit" disabled={busy || !username.trim() || !password} className="h-[52px] w-full rounded-xl bg-white text-[17px] font-semibold text-[#5b34d6] transition active:scale-[0.98] disabled:opacity-60">
+            {busy ? 'Signing in…' : 'Sign In'}
+          </button>
+          <div className="mt-4 text-center">
+            <button type="button" onClick={() => setForgot((v) => !v)} aria-expanded={forgot} className="min-h-10 px-3 text-[15px] text-white/90 underline-offset-4 hover:underline">
+              Forgot password?
+            </button>
+            {forgot ? <p className="mt-1 text-sm text-white/80">Ask your admin to reset it. They can set a new password for you in Settings.</p> : null}
+          </div>
+        </form>
       </div>
     </div>
   );

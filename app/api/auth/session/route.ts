@@ -11,7 +11,7 @@ export const GET = handle(async (req: Request) => {
     authenticated: !!s,
     role: s?.session.role,
     name: s?.session.name,
-    setupNeeded: !settings.hasPin.admin,
+    setupNeeded: false,
     pins: settings.hasPin,
     roles: publicRoles(settings),
   });

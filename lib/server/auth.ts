@@ -9,6 +9,7 @@ export const COOKIE = 'epc_session';
 const MAX_AGE = 60 * 60 * 24 * 30;
 
 export interface Session {
+  uid: number;
   role: Role;
   name: string;
   pinVersion: number;
@@ -21,7 +22,7 @@ function secret() {
 }
 
 export async function signSession(s: Session): Promise<string> {
-  return new SignJWT({ role: s.role, name: s.name, pinVersion: s.pinVersion })
+  return new SignJWT({ uid: s.uid, role: s.role, name: s.name, pinVersion: s.pinVersion })
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
     .setExpirationTime('30d')
@@ -72,10 +73,10 @@ export async function readSettings(): Promise<SettingsRow> {
   };
 }
 
-/** Reads and verifies the session cookie, then checks the PIN version is still current. */
+/** Reads and verifies the session cookie, then checks the account still exists, keeps the same password version and a valid role. */
 export async function getSession(req: Request): Promise<{ session: Session; settings: SettingsRow } | null> {
   const cookie = req.headers.get('cookie') || '';
-  const m = cookie.match(new RegExp('(?:^|;\\s*)' + COOKIE + '=([^;]+)'));
+  const m = cookie.match(new RegExp('(?:^|;\s*)' + COOKIE + '=([^;]+)'));
   if (!m) return null;
   let payload;
   try {
@@ -83,18 +84,16 @@ export async function getSession(req: Request): Promise<{ session: Session; sett
   } catch {
     return null;
   }
-  const role = String(payload.role || '');
-  if (!role) return null;
-  const settings = await readSettings();
-  if (isBaseRole(role)) {
-    if (!settings.hasPin[role] || settings.versions[role] !== payload.pinVersion) return null;
-  } else {
-    // admin-created role: it must still exist, still have a PIN, and the PIN must not have changed
-    const c = settings.custom.find((x) => x.key === role);
-    if (!c || !c.hasPin || c.version !== payload.pinVersion) return null;
-  }
+  const uid = Number(payload.uid);
+  if (!uid) return null;
+  const [rows, settings] = await Promise.all([q(`SELECT username, role, version FROM users WHERE id = $1`, [uid]) as Promise<Row[]>, readSettings()]);
+  const u = rows[0];
+  if (!u || Number(u.version) !== payload.pinVersion) return null;
+  const role = String(u.role);
+  // the role must still exist: a deleted custom role locks its members out until the admin changes their role
+  if (!isBaseRole(role) && !settings.custom.some((x) => x.key === role)) return null;
   registerRoles(settings.custom);
-  return { session: { role, name: String(payload.name || ''), pinVersion: Number(payload.pinVersion) }, settings };
+  return { session: { uid, role, name: String(u.username), pinVersion: Number(u.version) }, settings };
 }
 
 /** Every API route calls this. Returns 401 when the cookie is missing, invalid or its PIN was changed. */

@@ -91,8 +91,7 @@ interface Ctx {
   confirmBox: (o: ConfirmOpts) => Promise<boolean>;
   closeConfirm: (v: boolean) => void;
   // auth
-  login: (role: Role, pin: string, name: string) => Promise<string | null>;
-  setup: (pin: string, name: string) => Promise<string | null>;
+  login: (username: string, password: string) => Promise<string | null>;
   logout: () => Promise<void>;
   // data
   reloadAll: () => Promise<void>;
@@ -106,9 +105,8 @@ interface Ctx {
   deleteTask: (id: string) => Promise<boolean>;
   bulk: (ids: string[], payload: BulkPayload, label: string, local?: (t: CTask) => Partial<Task> | null) => Promise<void>;
   saveSettings: (patch: { targetBuffer?: number; allowTeamEdit?: boolean }) => Promise<void>;
-  savePin: (role: Role, pin: string) => Promise<boolean>;
   customRoles: CustomRole[];
-  createRole: (name: string, pin: string) => Promise<boolean>;
+  createRole: (name: string) => Promise<boolean>;
   renameRole: (key: string, name: string) => Promise<boolean>;
   deleteRole: (key: string) => Promise<boolean>;
   gotoTasks: (q: string) => void;
@@ -370,13 +368,12 @@ export function AppProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const login = useCallback(
-    async (role: Role, pin: string, name: string) => {
+    async (username: string, password: string) => {
       try {
-        await api('/api/auth/login', { body: { role, pin, name }, quiet401: true });
-        lsSet('epc.name', name);
-        await bootstrap(role, name);
+        const r = await api<{ role: Role; name: string }>('/api/auth/login', { body: { username, password }, quiet401: true });
+        await bootstrap(r.role, r.name);
         setViewAs(null);
-        const v = role === 'admin' ? 'dashboard' : 'team';
+        const v = r.role === 'admin' ? 'dashboard' : 'team';
         setViewState(v);
         lsSet('epc.view', v);
         writeLocation([v], true);
@@ -387,24 +384,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }
     },
     [bootstrap, resetData],
-  );
-
-  const setup = useCallback(
-    async (pin: string, name: string) => {
-      try {
-        await api('/api/auth/setup', { body: { pin, name }, quiet401: true });
-        lsSet('epc.name', name);
-        await refreshInfo();
-        await bootstrap('admin', name);
-        setViewState('dashboard');
-        lsSet('epc.view', 'dashboard');
-        writeLocation(['dashboard'], true);
-        return null;
-      } catch (e) {
-        return e instanceof Error ? e.message : 'Could not save the PIN.';
-      }
-    },
-    [bootstrap, refreshInfo],
   );
 
   const logout = useCallback(async () => {
@@ -641,21 +620,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     [toast],
   );
 
-  const savePin = useCallback(
-    async (r: Role, pin: string) => {
-      try {
-        const res = await api<{ pins: Record<BaseRole, boolean>; roles: CustomRole[] }>('/api/settings/pin', { body: { role: r, pin } });
-        setSettings((s) => ({ ...s, pins: res.pins, roles: res.roles }));
-        toast('Settings saved');
-        return true;
-      } catch (e) {
-        toast('Could not save settings: ' + (e instanceof Error ? e.message : ''), 'bad');
-        return false;
-      }
-    },
-    [toast],
-  );
-
   const customRoles = settings.roles || [];
   const roleCall = useCallback(
     async (fn: () => Promise<{ roles: CustomRole[] }>, okMsg: string) => {
@@ -671,7 +635,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
     },
     [toast, setSettings],
   );
-  const createRole = useCallback((name: string, pin: string) => roleCall(() => api('/api/roles', { body: { name, pin } }), 'Role created'), [roleCall]);
+  const createRole = useCallback((name: string) => roleCall(() => api('/api/roles', { body: { name } }), 'Role created'), [roleCall]);
   const renameRole = useCallback((key: string, name: string) => roleCall(() => api(`/api/roles/${encodeURIComponent(key)}`, { method: 'PATCH', body: { name } }), 'Role renamed'), [roleCall]);
   const deleteRole = useCallback((key: string) => roleCall(() => api(`/api/roles/${encodeURIComponent(key)}`, { method: 'DELETE' }), 'Role deleted'), [roleCall]);
   void rolesVer;
@@ -720,7 +684,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     confirmBox,
     closeConfirm,
     login,
-    setup,
     logout,
     reloadAll,
     pollNow,
@@ -733,7 +696,6 @@ export function AppProvider({ children }: { children: ReactNode }) {
     deleteTask,
     bulk,
     saveSettings,
-    savePin,
     customRoles,
     createRole,
     renameRole,

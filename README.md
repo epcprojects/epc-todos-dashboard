@@ -3,7 +3,7 @@
 Production version of the dashboard: a **Next.js (App Router, TypeScript)** app that runs on **Vercel's free Hobby plan** and stores its data in **Neon Postgres (free plan)**.
 
 * Excel files are read **in the browser** (SheetJS). The workbook is never uploaded or stored – only the parsed rows are sent to the server, 200 rows per request.
-* Roles come from a **PIN login** (Admin, Graphic Designer, Video Editor). The **server** enforces what each role may read and change.
+* Roles come from a **username + password login** (Admin, Graphic Designer, Video Editor, or a role you add). The **server** enforces what each role may read and change.
 * Browsers stay up to date by **polling every 15 seconds** while the tab is visible (Neon has no push).
 
 ---
@@ -18,7 +18,7 @@ cp .env.example .env.local      # then edit .env.local (see section 2)
 npm run dev
 ```
 
-Open <http://localhost:3000>. The first person to open the site sets the Admin PIN (section 5).
+Open <http://localhost:3000>. Run the users migration first (section 5), then log in as `admin`.
 
 Other commands:
 
@@ -97,18 +97,16 @@ The IAM user needs `s3:ListBucket` on the bucket and `s3:GetObject`, `s3:PutObje
 
 Notes for the Hobby plan: every API response is far below Vercel's 4.5 MB limit (task lists are sent in pages of 300, imports in chunks of 200 rows) and import routes set `maxDuration = 60`.
 
-## 5. First-time Admin PIN, other PINs, forgotten PIN
+## 5. Accounts and passwords
 
-* **First-time setup** – the first visit shows *Set up dashboard access*: enter the Admin PIN twice (4–8 digits) and your name. This works only while no Admin PIN exists.
-* **Designer and Editor PINs** – log in as Admin → **Settings → Access PINs**. Everyone opens the same link and picks a role + PIN. The name typed at login is shown in the activity history.
-* **Changing a PIN logs out everyone using that role** (each role has a `pin_version`; sessions with an older version get `401`). Changing your own Admin PIN keeps you logged in.
-* **Forgot the Admin PIN?** Run this in the Neon SQL Editor, then open the site – it shows the setup screen again:
+* Run [`migrations/004_users.sql`](migrations/004_users.sql) once in the Neon SQL Editor. It creates the `users` table and the first account: username `admin` (the initial password is in your hands, change it at once in **Settings → Users**).
+* **Users** – log in as admin → **Settings → Users**: create people with a username, password and role (Admin, Graphic Designer, Video Editor or a role you added). Change a role, set a new password or delete an account there.
+* **A new password logs that person out everywhere** (each user has a `version`; sessions with an older version get `401`). Changing your own password keeps you logged in.
+* **Forgot a password?** Ask an admin to set a new one. If the admin password is lost, reset it by running in the Neon SQL Editor (replace the hash with a bcrypt hash of the new password):
 
   ```sql
-  UPDATE settings SET admin_pin_hash = NULL, admin_pin_version = admin_pin_version + 1 WHERE id = 1;
+  UPDATE users SET password_hash = '<bcrypt hash>', version = version + 1 WHERE username = 'admin';
   ```
-
-  (It is also at the bottom of `neon_schema.sql`.)
 * After 10 failed logins from one IP within 15 minutes, login returns `429` for that IP.
 
 ---
