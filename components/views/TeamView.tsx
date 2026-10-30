@@ -24,7 +24,7 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
       {admin ? <p className="muted">Assign a sheet or tasks to this team in Task Distribution.</p> : null}
     </div>
   );
-  const tab = teamTab[team] === 'founder' && founderList.length ? 'founder' : teamTab[team] === 'table' ? 'table' : 'queue';
+  const tab = teamTab[team] === 'founder' ? 'founder' : teamTab[team] === 'table' ? 'table' : 'queue';
   const scheduledToday = list.filter((t) => t.postDate === today);
   const doneToday = list.filter((t) => localDay(t.completedAt) === today).length;
   const ip = list.filter((t) => t.status === 'in_progress').length;
@@ -96,13 +96,11 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
               All tasks
             </button>
           </div>
-          {founderList.length ? (
-            <button role="tab" className="founder-tab" aria-selected={tab === 'founder'} onClick={() => setTeamTab(team, 'founder')}>
-              <Crown className="size-4" />
-              Founder content
-              <span className="num">{founderList.filter((t) => t.status !== 'completed').length}</span>
-            </button>
-          ) : null}
+          <button role="tab" className="founder-tab" aria-selected={tab === 'founder'} onClick={() => setTeamTab(team, 'founder')}>
+            <Crown className="size-4" />
+            Founder content
+            <span className="num">{founderList.filter((t) => t.status !== 'completed').length}</span>
+          </button>
         </div>
         {tab === 'founder' ? (
           <div className="founder-pane">
@@ -113,7 +111,14 @@ export function TeamView({ team, admin }: { team: Role; admin: boolean }) {
                 <span>Content from the founder. It is listed separately from the regular queue, so check here first.</span>
               </div>
             </div>
-            <Queue team={team + '-founder'} list={founderList} today={today} qExpand={qExpand} setQExpand={setQExpand} />
+            {founderList.length ? (
+              <Queue team={team + '-founder'} list={founderList} today={today} qExpand={qExpand} setQExpand={setQExpand} />
+            ) : (
+              <div className="empty">
+                <h2>No founder content yet.</h2>
+                <p className="muted">{admin ? 'Tick “Founder content” for a sheet on the Assign step of Content Import and it will show up here.' : 'Founder content assigned to you will show up here.'}</p>
+              </div>
+            )}
           </div>
         ) : tab === 'queue' ? (
           <Queue team={team} list={list} today={today} qExpand={qExpand} setQExpand={setQExpand} />
