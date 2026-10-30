@@ -1,14 +1,14 @@
 'use client';
-import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, LayoutGrid, List, Pencil, RefreshCw, Trash2, Upload, X } from 'lucide-react';
+import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, List, Pencil, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, sanitizeName, type ManageFile, type ManageSubfolder } from '@/lib/manage-config';
+import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, sanitizeName, type ManageFile } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
 import { fmtDT } from '@/lib/dates';
 import { Button } from '@/components/ui/button';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
-import { PlatformIcon } from '../PlatformIcon';
+import { PlatformIcon, hasPlatformIcon } from '../PlatformIcon';
 import { useApp } from '../store';
 import { PageHeader } from '../ui';
 
@@ -34,6 +34,8 @@ interface Target {
 const PAGE = 200;
 const CONCURRENCY = 3;
 const label = (key: string) => folderByKey(key)?.label || key;
+/** Display name of the last segment of a folder path (the friendly name for LinkedIn, TikTok …); the root is Automation-Folder. */
+const hereLabel = (path: string) => (path ? (path.includes('/') ? (path.split('/').pop() as string) : label(path)) : ROOT_PREFIX);
 
 function FolderIcon({ size = 28 }: { size?: number }) {
   return (
@@ -84,7 +86,7 @@ function PreviewDialog({ file, index, total, url, onClose, onPrev, onNext, onDow
           <div className="min-w-0 flex-1">
             <DialogTitle className="truncate text-[15px] font-semibold">{file.name}</DialogTitle>
             <DialogDescription className="text-[13px]">
-              {formatBytes(file.size)} · {label(file.folder)} · {fmtDT(file.lastModified)}
+              {formatBytes(file.size)} · {hereLabel(file.path)} · {fmtDT(file.lastModified)}
             </DialogDescription>
           </div>
           <Button variant="outline" size="lg" onClick={onDownload}>
@@ -146,9 +148,9 @@ export function ManageView() {
   const [files, setFiles] = useState<ManageFile[]>([]);
   const [loaded, setLoaded] = useState(false);
   const [err, setErr] = useState('');
-  const [subfolders, setSubfolders] = useState<ManageSubfolder[]>([]);
-  const [folder, setFolder] = useState<string | null>(null);
+  const [subfolders, setSubfolders] = useState<string[]>([]);
   const [path, setPath] = useState('');
+  const [mkdir, setMkdir] = useState<{ name: string; error: string; busy: boolean } | null>(null);
   const [view, setView] = useState<'list' | 'grid'>('list');
   const [q, setQ] = useState('');
   const [sort, setSort] = useState<SortKey>('name');
@@ -172,10 +174,8 @@ export function ManageView() {
   // restore the folder from the URL after a reload, and follow browser Back / Forward ("/manage/Linkedin/Campaigns/Q4")
   useEffect(() => {
     const read = () => {
-      const [v, f, ...rest] = readLocation();
-      const top = v === 'manage' && f ? FOLDERS.find((x) => x.key.toLowerCase() === f.toLowerCase()) : null;
-      setFolder(top ? top.key : null);
-      setPath(top ? rest.join('/') : '');
+      const [v, ...rest] = readLocation();
+      setPath(v === 'manage' ? rest.join('/') : '');
       setSel(new Set());
       setQ('');
       setShown(PAGE);
@@ -187,7 +187,7 @@ export function ManageView() {
 
   const load = useCallback(async () => {
     try {
-      const r = await api<{ files: ManageFile[]; folders: ManageSubfolder[] }>('/api/manage/files');
+      const r = await api<{ files: ManageFile[]; folders: string[] }>('/api/manage/files');
       setFiles(r.files);
       setSubfolders(r.folders);
       setErr('');
@@ -214,10 +214,9 @@ export function ManageView() {
     return () => window.removeEventListener('beforeunload', h);
   }, [running]);
 
-  const inFolder = useMemo(() => (folder ? files.filter((f) => f.folder === folder && f.path === path) : []), [files, folder, path]);
-  // folders directly below the current location: from file paths and from folder markers (empty folders made in S3)
+  const inFolder = useMemo(() => files.filter((f) => f.path === path), [files, path]);
+  // folders directly below the current location: from file paths and from folder markers (empty folders); the five standard folders always show at the top
   const children = useMemo(() => {
-    if (!folder) return [];
     const base = path ? path + '/' : '';
     const m = new Map<string, { n: number; bytes: number }>();
     const add = (p: string) => {
@@ -226,16 +225,23 @@ export function ManageView() {
       if (!m.has(name)) m.set(name, { n: 0, bytes: 0 });
       return m.get(name) as { n: number; bytes: number };
     };
-    subfolders.filter((d) => d.folder === folder).forEach((d) => add(d.path));
-    files.filter((f) => f.folder === folder).forEach((f) => {
+    if (!path) FOLDERS.forEach((f) => add(f.key));
+    subfolders.forEach((d) => add(d));
+    files.forEach((f) => {
       const c = add(f.path);
       if (c) {
         c.n++;
         c.bytes += f.size;
       }
     });
-    return [...m.entries()].map(([name, v]) => ({ name, ...v })).sort((a, b) => a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' }));
-  }, [files, subfolders, folder, path]);
+    const std = (n: string) => FOLDERS.findIndex((f) => f.key === n);
+    return [...m.entries()]
+      .map(([name, v]) => ({ name, ...v }))
+      .sort((a, b) => {
+        if (!path && (std(a.name) >= 0 || std(b.name) >= 0)) return (std(a.name) < 0 ? 99 : std(a.name)) - (std(b.name) < 0 ? 99 : std(b.name)) || a.name.localeCompare(b.name);
+        return a.name.localeCompare(b.name, undefined, { numeric: true, sensitivity: 'base' });
+      });
+  }, [files, subfolders, path]);
   const list = useMemo(() => {
     const term = q.trim().toLowerCase();
     const l = term ? inFolder.filter((f) => f.name.toLowerCase().includes(term)) : [...inFolder];
@@ -295,10 +301,9 @@ export function ManageView() {
     };
   }, [view, visible, thumbs]);
 
-  const open = (f: string | null, p = '') => {
-    setFolder(f);
+  const open = (p: string) => {
     setPath(p);
-    writeLocation(f ? ['manage', f, ...p.split('/').filter(Boolean)] : ['manage']);
+    writeLocation(['manage', ...p.split('/').filter(Boolean)]);
     setSel(new Set());
     setQ('');
     setShown(PAGE);
@@ -320,7 +325,7 @@ export function ManageView() {
   const patch = (id: number, p: Partial<UploadItem>) => setUploads((u) => u.map((x) => (x.id === id ? { ...x, ...p } : x)));
 
   const startUpload = async (picked: File[], onExisting?: 'replace' | 'keep') => {
-    if (!folder || !picked.length) return;
+    if (!picked.length) return;
     if (!onExisting) {
       // same name already in this folder: ask whether to replace it or keep both
       const have = new Set(inFolder.map((f) => f.name.toLowerCase()));
@@ -348,7 +353,7 @@ export function ManageView() {
     for (let i = 0; i < ok.length; i += MAX_FILES_PER_UPLOAD_REQUEST) {
       const chunk = ok.slice(i, i + MAX_FILES_PER_UPLOAD_REQUEST);
       try {
-        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { folder, path, replace: onExisting === 'replace', files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
+        const r = await api<{ targets: Target[] }>('/api/manage/upload-url', { body: { path, replace: onExisting === 'replace', files: chunk.map((c) => ({ name: c.file.name, size: c.file.size, type: c.file.type })) } });
         chunk.forEach((c, k) => queue.push({ item: c, target: r.targets[k] }));
       } catch (e) {
         chunk.forEach((c) => patch(c.id, { status: 'failed', error: e instanceof Error ? e.message : 'Could not start the upload.' }));
@@ -405,6 +410,21 @@ export function ManageView() {
     await load();
   };
 
+  const doMkdir = async () => {
+    if (!mkdir) return;
+    const name = mkdir.name.trim();
+    if (!name) return setMkdir({ ...mkdir, error: 'Enter a folder name.' });
+    setMkdir({ ...mkdir, busy: true, error: '' });
+    try {
+      await api('/api/manage/folder', { body: { path, name } });
+      toast(`Created folder ${name}`);
+      setMkdir(null);
+      await load();
+    } catch (e) {
+      setMkdir((m) => (m ? { ...m, busy: false, error: e instanceof Error ? e.message : 'Could not create the folder.' } : m));
+    }
+  };
+
   const startRename = (file: ManageFile) => setRenaming({ file, name: file.name, error: '', busy: false });
   const doRename = async () => {
     if (!renaming) return;
@@ -434,61 +454,40 @@ export function ManageView() {
     }
   };
 
-  const counts = useMemo(() => {
-    const m: Record<string, { n: number; bytes: number }> = {};
-    FOLDERS.forEach((f) => (m[f.key] = { n: 0, bytes: 0 }));
-    files.forEach((f) => {
-      if (m[f.folder]) {
-        m[f.folder].n++;
-        m[f.folder].bytes += f.size;
-      }
-    });
-    return m;
-  }, [files]);
-
+  const segs = path.split('/').filter(Boolean);
   const crumbs = (
     <nav className="mg-crumbs" aria-label="Location">
-      <button className="linkish" onClick={() => open(null)}>
-        Manage
+      <button className="linkish" onClick={() => open('')}>
+        Content Manage
       </button>
       <span aria-hidden="true">›</span>
-      {folder ? (
-        <>
-          <button className="linkish" onClick={() => open(null)}>
-            {ROOT_PREFIX}
-          </button>
-          <span aria-hidden="true">›</span>
-          {path ? (
-            <button className="linkish" onClick={() => open(folder)}>
-              {label(folder)}
-            </button>
-          ) : (
-            <b>{label(folder)}</b>
-          )}
-          {path.split('/').filter(Boolean).map((seg, i, a) => (
-            <span key={i} className="contents">
-              <span aria-hidden="true">›</span>
-              {i === a.length - 1 ? (
-                <b>{seg}</b>
-              ) : (
-                <button className="linkish" onClick={() => open(folder, a.slice(0, i + 1).join('/'))}>
-                  {seg}
-                </button>
-              )}
-            </span>
-          ))}
-        </>
+      {segs.length ? (
+        <button className="linkish" onClick={() => open('')}>
+          {ROOT_PREFIX}
+        </button>
       ) : (
         <b>{ROOT_PREFIX}</b>
       )}
+      {segs.map((seg, i) => (
+        <span key={i} className="contents">
+          <span aria-hidden="true">›</span>
+          {i === segs.length - 1 ? (
+            <b>{i === 0 ? label(seg) : seg}</b>
+          ) : (
+            <button className="linkish" onClick={() => open(segs.slice(0, i + 1).join('/'))}>
+              {i === 0 ? label(seg) : seg}
+            </button>
+          )}
+        </span>
+      ))}
     </nav>
   );
 
   return (
     <>
       <PageHeader
-        title="Files"
-        sub="Browse, upload, download and delete media."
+        title="Content Manage"
+        sub="Browse, upload, organise and download your media."
         eyebrow="Storage"
         actions={
           <button className="btn" onClick={() => void load()}>
@@ -500,7 +499,6 @@ export function ManageView() {
       <section
         className={`panel mg @container ${over ? 'over' : ''}`}
         onDragOver={(e) => {
-          if (!folder) return;
           e.preventDefault();
           setOver(true);
         }}
@@ -508,30 +506,18 @@ export function ManageView() {
         onDrop={(e) => {
           e.preventDefault();
           setOver(false);
-          if (folder) void startUpload([...e.dataTransfer.files]);
+          void startUpload([...e.dataTransfer.files]);
         }}
       >
         {crumbs}
         {!loaded ? (
           <div className="loading">Loading files…</div>
-        ) : !folder ? (
-          <div className="mg-folders">
-            {FOLDERS.map((f) => (
-              <button key={f.key} className="mg-folder" onClick={() => open(f.key)}>
-                <PlatformIcon name={f.key} className="size-11" />
-                <b>{f.label}</b>
-                <span className="muted small">
-                  {counts[f.key].n} {counts[f.key].n === 1 ? 'file' : 'files'} · {formatBytes(counts[f.key].bytes)}
-                </span>
-              </button>
-            ))}
-          </div>
         ) : (
           <>
             <div className="mg-bar">
               <label className="field mg-search">
                 <span>Search files</span>
-                <input className="inp" type="search" value={q} placeholder={`Search in ${path.split('/').pop() || label(folder)}…`} onChange={(e) => { setQ(e.target.value); setShown(PAGE); }} />
+                <input className="inp" type="search" value={q} placeholder={`Search in ${hereLabel(path)}…`} onChange={(e) => { setQ(e.target.value); setShown(PAGE); }} />
               </label>
               <label className="field">
                 <span>Sort by</span>
@@ -556,6 +542,9 @@ export function ManageView() {
                 <Upload className="size-4" /> Upload files
               </label>
               <input id="mg-file" ref={fileIn} type="file" multiple hidden onChange={(e) => { void startUpload([...(e.target.files || [])]); e.target.value = ''; }} />
+              <button className="btn" onClick={() => setMkdir({ name: '', error: '', busy: false })}>
+                <FolderPlus className="size-4" /> New folder
+              </button>
             </div>
 
             {sel.size > 0 && (
@@ -573,14 +562,14 @@ export function ManageView() {
               </div>
             )}
 
-            {over && <div className="mg-drop">Drop files to upload to {path.split('/').pop() || label(folder)}</div>}
+            {over && <div className="mg-drop">Drop files to upload to {hereLabel(path)}</div>}
 
             {children.length > 0 && !q && (
               <div className="mg-folders" style={{ marginBottom: 16 }}>
                 {children.map((c) => (
-                  <button key={c.name} className="mg-folder" onClick={() => open(folder, path ? `${path}/${c.name}` : c.name)}>
-                    <FolderIcon size={44} />
-                    <b>{c.name}</b>
+                  <button key={c.name} className="mg-folder" onClick={() => open(path ? `${path}/${c.name}` : c.name)}>
+                    {!path && hasPlatformIcon(c.name) ? <PlatformIcon name={c.name} className="size-11" /> : <FolderIcon size={44} />}
+                    <b>{!path ? label(c.name) : c.name}</b>
                     <span className="muted small">
                       {c.n} {c.n === 1 ? 'file' : 'files'} · {formatBytes(c.bytes)}
                     </span>
@@ -591,8 +580,8 @@ export function ManageView() {
             {!list.length ? (
               children.length > 0 && !q ? null : (
               <div className="empty">
-                <h2>{inFolder.length ? 'No files match your search.' : 'This folder is empty.'}</h2>
-                <p className="muted">{inFolder.length ? 'Try a different search.' : 'Upload files with the button above, or drag them onto this page.'}</p>
+                <h2>{inFolder.length ? 'No files match your search.' : 'No files in this folder.'}</h2>
+                <p className="muted">{inFolder.length ? 'Try a different search.' : 'Upload files with the button above, drag them onto this page, or create a folder.'}</p>
               </div>
               )
             ) : view === 'list' ? (
@@ -705,6 +694,37 @@ export function ManageView() {
           </>
         )}
       </section>
+
+      <Dialog open={!!mkdir} onOpenChange={(o) => !o && !mkdir?.busy && setMkdir(null)}>
+        <DialogContent className="sm:max-w-md">
+          <DialogTitle className="text-lg font-semibold">New folder</DialogTitle>
+          <DialogDescription className="text-sm">
+            Created in <b className="text-foreground">{hereLabel(path)}</b>.
+          </DialogDescription>
+          <form
+            className="grid gap-3"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void doMkdir();
+            }}
+          >
+            <Input autoFocus aria-label="Folder name" placeholder="Folder name" value={mkdir?.name ?? ''} maxLength={100} onChange={(e) => setMkdir((m) => (m ? { ...m, name: e.target.value, error: '' } : m))} className="h-10 text-base" />
+            {mkdir?.error ? (
+              <p className="text-sm text-destructive" role="alert">
+                {mkdir.error}
+              </p>
+            ) : null}
+            <div className="flex justify-end gap-2">
+              <Button type="button" variant="ghost" size="lg" disabled={mkdir?.busy} onClick={() => setMkdir(null)}>
+                Cancel
+              </Button>
+              <Button type="submit" size="lg" disabled={mkdir?.busy}>
+                {mkdir?.busy ? 'Creating…' : 'Create folder'}
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
 
       <Dialog open={!!renaming} onOpenChange={(o) => !o && !renaming?.busy && setRenaming(null)}>
         <DialogContent className="sm:max-w-md">

@@ -54,7 +54,9 @@ To let the admin create extra roles (for example "Front-end Developer") with the
 
 ### Optional: file manager (S3)
 
-**Manage** is a file explorer for the bucket folders `Automation-Folder/{Linkedin,Facebook,Instagram,Tiktok,Youtube}`. Every role can view, download, upload and delete. Add four more environment variables (see `.env.example`): `AWS_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
+**Content Manage** is a file explorer for the bucket folder `Automation-Folder`. LinkedIn, Facebook, Instagram, TikTok and YouTube are always shown at the top level; every role can create new folders (at the top level or inside any folder), and view, download, upload, rename and delete files. Folders made in the S3 console show up too. Add four more environment variables (see `.env.example`): `AWS_BUCKET`, `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`.
+
+The IAM user needs `s3:ListBucket` on the bucket and `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` on `arn:aws:s3:::<bucket>/Automation-Folder/*` (folders are created as zero-byte `name/` objects with `PutObject`, rename is copy + delete). Browser uploads also need the bucket CORS rule from the earlier setup.
 
 * **IAM permissions** needed: `s3:ListBucket` on the bucket, and `s3:GetObject`, `s3:PutObject`, `s3:DeleteObject` on `bucket/Automation-Folder/*`.
 * **Uploads go straight from the browser to S3** with a short-lived presigned POST, so Vercel's 4.5 MB body limit never applies. S3 itself enforces the 5 GiB per-file limit.

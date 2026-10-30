@@ -1,5 +1,5 @@
 import { z } from 'zod';
-import { FOLDERS, cleanPath, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, extOf, isAllowedName, sanitizeName, uniqueName, ALLOWED_EXTENSIONS, formatBytes } from '@/lib/manage-config';
+import { cleanPath, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, extOf, isAllowedName, sanitizeName, uniqueName, ALLOWED_EXTENSIONS, formatBytes } from '@/lib/manage-config';
 import { requireSession } from '@/lib/server/auth';
 import { ApiError, body, handle, json } from '@/lib/server/http';
 import { listFolder, presignUpload } from '@/lib/server/s3';
@@ -8,7 +8,7 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 const schema = z.object({
-  folder: z.string().min(1).max(40),
+  /** Folder below Automation-Folder, e.g. "Linkedin/Q4" ('' = the root). */
   path: z.string().max(900).default(''),
   /** true: a file whose name already exists overwrites it; false: it is saved as "name (1)". */
   replace: z.boolean().default(false),
@@ -26,12 +26,11 @@ const schema = z.object({
 export const POST = handle(async (req: Request) => {
   await requireSession(req); // every role may upload
   const b = await body(req, schema);
-  if (!FOLDERS.some((f) => f.key === b.folder)) throw new ApiError(400, 'Invalid request: unknown folder');
 
   const path = cleanPath(b.path);
   if (path === null) throw new ApiError(400, 'Invalid request: bad folder path');
 
-  const existing = new Map((await listFolder(b.folder, path)).map((f) => [f.name.toLowerCase(), f.name]));
+  const existing = new Map((await listFolder(path)).map((f) => [f.name.toLowerCase(), f.name]));
   const taken = new Set(existing.keys());
   const targets = [];
   for (const f of b.files) {
@@ -42,7 +41,7 @@ export const POST = handle(async (req: Request) => {
     const stored = b.replace ? existing.get(original.toLowerCase()) : undefined;
     const name = stored ?? uniqueName(original, taken);
     taken.add(name.toLowerCase());
-    const key = `${ROOT_PREFIX}/${b.folder}/${path ? path + '/' : ''}${name}`;
+    const key = `${ROOT_PREFIX}/${path ? path + '/' : ''}${name}`;
     const type = (f.type || 'application/octet-stream').replace(/[\r\n]/g, '');
     const post = await presignUpload(key, type);
     targets.push({ name, originalName: f.name, renamed: !stored && name !== original, replaced: !!stored, ext: extOf(name), key, url: post.url, fields: post.fields });

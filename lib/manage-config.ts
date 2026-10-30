@@ -1,9 +1,9 @@
 /* Settings and pure helpers for the "Manage" file explorer. Shared by the browser and the server. */
 
-/** Everything lives under this prefix in the bucket: <bucket>/Automation-Folder/<folder>/<file>. */
+/** Everything lives under this prefix in the bucket: <bucket>/Automation-Folder/<any folders>/<file>. */
 export const ROOT_PREFIX = 'Automation-Folder';
 
-/** The folders that exist. `key` is the exact folder name in S3, `label` is what people see. */
+/** Folders always shown at the top level, even while empty. `key` is the exact folder name in S3, `label` is what people see. More can be created in the app. */
 export const FOLDERS: { key: string; label: string }[] = [
   { key: 'Linkedin', label: 'LinkedIn' },
   { key: 'Facebook', label: 'Facebook' },
@@ -70,47 +70,49 @@ export function uniqueName(name: string, taken: Set<string>): string {
 
 export interface ManageFile {
   key: string;
-  folder: string;
-  /** Sub-folders below `folder`, e.g. "Campaigns/Q4" ('' when the file sits directly in `folder`). */
+  /** Folder below Automation-Folder, e.g. "Linkedin/Campaigns/Q4" ('' for a file directly in Automation-Folder). */
   path: string;
   name: string;
   size: number;
   lastModified: string;
 }
 
-/** A folder created in the S3 console (or by an upload): its top-level folder plus the nested path below it. */
-export interface ManageSubfolder {
-  folder: string;
-  path: string;
-}
-
 const badSegment = (s: string) => !s || s === '.' || s === '..';
 
-/** Validates a nested folder path such as "Campaigns/Q4"; returns it cleaned, or null when unsafe. */
+/** Validates a folder path such as "Linkedin/Q4"; returns it cleaned ('' = the root), or null when unsafe. */
 export function cleanPath(raw: string): string | null {
   const segs = String(raw || '').split('/').filter((x) => x !== '');
   if (segs.some(badSegment) || segs.join('/').length > 900) return null;
   return segs.join('/');
 }
 
-/** Validates "Automation-Folder/<known folder>[/<sub folders>]/<file name>"; null for anything else (no "..", no folder markers). */
-export function parseKey(key: string): { folder: string; path: string; name: string } | null {
+/** Makes a typed folder name safe as one path segment: no slashes, no control characters, bounded length. */
+export function sanitizeFolderName(raw: string): string {
+  const n = String(raw || '')
+    .replace(/[\\/]+/g, '_')
+    // eslint-disable-next-line no-control-regex
+    .replace(/[\u0000-\u001f\u007f]/g, '')
+    .trim()
+    .slice(0, 100)
+    .trim();
+  return badSegment(n) ? '' : n;
+}
+
+/** Validates "Automation-Folder/[<folders>/]<file name>"; null for anything else (no "..", no folder markers). */
+export function parseKey(key: string): { path: string; name: string } | null {
   const prefix = ROOT_PREFIX + '/';
   if (!key.startsWith(prefix)) return null;
   const segs = key.slice(prefix.length).split('/');
-  if (segs.length < 2) return null;
-  const [folder, ...rest] = segs;
-  const name = rest.pop() as string;
-  if (!folderByKey(folder) || badSegment(name) || rest.some(badSegment)) return null;
-  return { folder, path: rest.join('/'), name };
+  const name = segs.pop() as string;
+  if (badSegment(name) || segs.some(badSegment)) return null;
+  return { path: segs.join('/'), name };
 }
 
-/** A folder marker object ("Automation-Folder/Linkedin/Campaigns/") as made by the S3 console; null for files and top-level folders. */
-export function parseFolderKey(key: string): ManageSubfolder | null {
-  if (!key.endsWith('/')) return null;
-  const segs = key.slice(0, -1).split('/');
-  if (segs[0] !== ROOT_PREFIX || segs.length < 3 || segs.slice(1).some(badSegment) || !folderByKey(segs[1])) return null;
-  return { folder: segs[1], path: segs.slice(2).join('/') };
+/** A folder marker object ("Automation-Folder/Linkedin/Campaigns/") as made by the S3 console or by New folder; null for files. */
+export function parseFolderKey(key: string): string | null {
+  if (!key.endsWith('/') || !key.startsWith(ROOT_PREFIX + '/')) return null;
+  const segs = key.slice(ROOT_PREFIX.length + 1, -1).split('/');
+  return segs.some(badSegment) ? null : segs.join('/');
 }
 
 export function formatBytes(n: number): string {

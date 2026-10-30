@@ -63,7 +63,7 @@ function useNavGroups(): NavGroup[] {
         label: 'Workspace',
         items: [
           { key: 'imports', label: 'Imports', icon: History, badge: { n: imports.length } },
-          { key: 'manage', label: 'Manage', icon: FolderOpen },
+          { key: 'manage', label: 'Content Manage', icon: FolderOpen },
           { key: 'settings', label: 'Settings', icon: Settings },
         ],
       },
@@ -77,7 +77,7 @@ function useNavGroups(): NavGroup[] {
       items: [
         { key: 'team', label: 'My Tasks', icon: ListTodo, badge: od ? { n: od, bad: true } : { n: open(role) } },
         { key: 'calendar', label: 'Calendar', icon: CalendarDays },
-        { key: 'manage', label: 'Manage', icon: FolderOpen },
+        { key: 'manage', label: 'Content Manage', icon: FolderOpen },
       ],
     },
   ];
