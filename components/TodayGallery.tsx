@@ -1,10 +1,11 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, Copy, Download, Image as ImageIcon, X } from 'lucide-react';
-import { formatBytes, mediaKind, type ManageFile, type MediaKind } from '@/lib/manage-config';
+import { FOLDERS, formatBytes, mediaKind, type ManageFile, type MediaKind } from '@/lib/manage-config';
 import { groupRecent, uploadTime } from '@/lib/recent';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
 import { LazyThumb } from './LazyThumb';
+import { PlatformIcon } from './PlatformIcon';
 
 export interface TodayLink {
   title: string;
@@ -21,6 +22,24 @@ interface Props {
   /** Address that saves a file. */
   href: (key: string, mode: 'view' | 'download') => string;
   only?: '' | MediaKind;
+}
+
+/** The platform of a file: the platform folder it sits in (LinkedIn, TikTok …), else the platform of its task. */
+function platformOf(f: ManageFile, link?: TodayLink): string {
+  const first = (f.path.split('/')[0] || '').toLowerCase();
+  const std = FOLDERS.find((x) => x.key.toLowerCase() === first);
+  return std?.label || link?.platform || '';
+}
+
+function PlatformBadge({ name, className = '' }: { name: string; className?: string }) {
+  if (!name) return null;
+  const single = !/[,/&]/.test(name);
+  return (
+    <span className={`inline-flex max-w-full items-center gap-1 rounded-md bg-black/75 px-1.5 py-0.5 text-[11px] leading-tight font-semibold text-white ${className}`}>
+      {single ? <PlatformIcon name={name} className="size-3.5" /> : null}
+      <span className="truncate">{name}</span>
+    </span>
+  );
 }
 
 async function copyText(text: string) {
@@ -73,6 +92,7 @@ function Card({ f, link, url, href, onOpen }: { f: ManageFile; link?: TodayLink;
           <span className="grid size-full place-items-center text-muted-foreground">{kind === 'video' ? <Clapperboard className="size-8" /> : <ImageIcon className="size-8" />}</span>
         )}
         <span className="absolute top-1.5 left-1.5 rounded-md bg-black/75 px-1.5 py-0.5 text-[10.5px] font-bold tracking-wide text-white sm:top-2 sm:left-2 sm:px-2 sm:text-[11px]">{f.name.split('.').pop()?.toUpperCase()}</span>
+        <PlatformBadge name={platformOf(f, link)} className="absolute bottom-1.5 left-1.5 max-w-[calc(100%-3rem)] sm:bottom-2 sm:left-2" />
         {kind === 'video' ? <span className="absolute right-1.5 bottom-1.5 grid size-8 place-items-center rounded-full bg-black/70 text-white sm:right-2 sm:bottom-2">▶</span> : null}
       </button>
       <div className="flex min-w-0 flex-col gap-1 px-1">
@@ -83,7 +103,6 @@ function Card({ f, link, url, href, onOpen }: { f: ManageFile; link?: TodayLink;
         </b>
         <span className="truncate text-[12.5px] text-muted-foreground sm:text-[13px]">
           {formatBytes(f.size)} · {uploadTime(f.lastModified)}
-          {link?.platform ? ` · ${link.platform}` : ''}
         </span>
         {cap ? (
           <p className="line-clamp-3 min-h-[4.5rem] text-sm leading-relaxed whitespace-pre-line text-muted-foreground max-sm:hidden">{cap}</p>
@@ -137,10 +156,12 @@ function Lightbox({ files, index, links, urls, href, onIndex, onClose }: { files
         <div className="flex items-center gap-3 border-b px-4 py-2.5">
           <div className="min-w-0 flex-1">
             <DialogTitle className="truncate text-[15px] font-semibold">{f.name}</DialogTitle>
-            <DialogDescription className="truncate text-[12.5px]">
-              {formatBytes(f.size)} · {uploadTime(f.lastModified)}
-              {link?.platform ? ` · ${link.platform}` : ''}
-              {total > 1 ? ` · ${index + 1} of ${total}` : ''}
+            <DialogDescription className="flex items-center gap-2 text-[12.5px]">
+              <PlatformBadge name={platformOf(f, link)} className="shrink-0" />
+              <span className="truncate">
+                {formatBytes(f.size)} · {uploadTime(f.lastModified)}
+                {total > 1 ? ` · ${index + 1} of ${total}` : ''}
+              </span>
             </DialogDescription>
           </div>
           <button type="button" onClick={onClose} aria-label="Close" className="grid size-11 shrink-0 place-items-center rounded-xl hover:bg-muted">
