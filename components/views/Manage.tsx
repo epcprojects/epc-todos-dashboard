@@ -1,6 +1,8 @@
 'use client';
 import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, Link2, List, Pencil, Play, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
+import { TodayGallery } from '../TodayGallery';
+import { TODAY_FOLDER, recentMedia } from '@/lib/recent';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, mediaKind, platformOfPath, sanitizeName, type FileLink, type ManageFile, type MediaKind, type TaskOption } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
 import { uploadToS3 } from '@/lib/client/s3upload';
@@ -36,7 +38,7 @@ interface Target {
 
 const PAGE = 200;
 const CONCURRENCY = 3;
-const label = (key: string) => folderByKey(key)?.label || key;
+const label = (key: string) => (key === TODAY_FOLDER ? 'today-posts' : folderByKey(key)?.label || key);
 /** Display name of the last segment of a folder path (the friendly name for LinkedIn, TikTok …); the root is Automation-Folder. */
 const hereLabel = (path: string) => (path ? (path.includes('/') ? (path.split('/').pop() as string) : label(path)) : ROOT_PREFIX);
 
@@ -320,6 +322,18 @@ export function ManageView() {
     return () => window.removeEventListener('beforeunload', h);
   }, [running]);
 
+  const inToday = path === TODAY_FOLDER;
+  const recent = useMemo(() => recentMedia(files).filter((f) => !lockedKind || mediaKind(f.name) === lockedKind), [files, lockedKind]);
+  const copyPublicLink = async () => {
+    try {
+      const r = await api<{ token: string }>('/api/manage/public-link');
+      const url = `${window.location.origin}/public/today-posts/${r.token}`;
+      await navigator.clipboard.writeText(url);
+      toast('Public link copied. Anyone with it can view and download today-posts, without logging in.');
+    } catch (e) {
+      toast(e instanceof Error ? e.message : 'Could not copy the link.', 'bad');
+    }
+  };
   const inFolder = useMemo(() => files.filter((f) => f.path === path && (!lockedKind || mediaKind(f.name) === lockedKind)), [files, path, lockedKind]);
   // folders directly below the current location: from file paths and from folder markers (empty folders); the five standard folders always show at the top
   const children = useMemo(() => {
@@ -444,6 +458,7 @@ export function ManageView() {
   );
 
   const startUpload = async (picked: File[], go?: { replace: boolean; attach: Record<number, string | null> }) => {
+    if (path === TODAY_FOLDER) return;
     if (!picked.length) return;
     if (!go) {
       // same name already in this folder: ask whether to replace it or keep both
@@ -658,11 +673,36 @@ export function ManageView() {
         onDrop={(e) => {
           e.preventDefault();
           setOver(false);
-          void startUpload([...e.dataTransfer.files]);
+          if (path !== TODAY_FOLDER) void startUpload([...e.dataTransfer.files]);
         }}
       >
         {crumbs}
-        {!loaded ? (
+        {inToday ? (
+          !loaded ? (
+            <div className="loading">Loading files…</div>
+          ) : (
+            <>
+              <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
+                <p className="max-w-2xl text-sm text-muted-foreground">
+                  Everything uploaded in the last 24 hours, from every folder, grouped by day and by Images and Videos. This folder updates by itself and is view and download only.
+                </p>
+                {role === 'admin' ? (
+                  <button className="btn" onClick={() => void copyPublicLink()}>
+                    <Link2 className="size-4" /> Copy public link
+                  </button>
+                ) : null}
+              </div>
+              <TodayGallery
+                files={files}
+                links={links}
+                now={Date.now()}
+                only={lockedKind}
+                loadUrls={async (keys) => (await api<{ urls: Record<string, string> }>('/api/manage/urls', { body: { keys } })).urls}
+                href={(key, mode) => `/api/manage/download?key=${encodeURIComponent(key)}&mode=${mode}`}
+              />
+            </>
+          )
+        ) : !loaded ? (
           <div className="loading">Loading files…</div>
         ) : (
           <>
@@ -731,6 +771,15 @@ export function ManageView() {
 
             {children.length > 0 && !q && (
               <div className="mg-folders" style={{ marginBottom: 16 }}>
+                {!path && (
+                  <button className="mg-folder" onClick={() => open(TODAY_FOLDER)}>
+                    <FolderIcon size={44} />
+                    <b>today-posts</b>
+                    <span className="muted small">
+                      {recent.length} {recent.length === 1 ? 'file' : 'files'} · last 24 hours
+                    </span>
+                  </button>
+                )}
                 {children.map((c) => (
                   <button key={c.name} className="mg-folder" onClick={() => open(path ? `${path}/${c.name}` : c.name)}>
                     {!path && hasPlatformIcon(c.name) ? <PlatformIcon name={c.name} className="size-11" /> : <FolderIcon size={44} />}
