@@ -139,7 +139,7 @@ export function TodayGallery({ files, links, now, loadUrls, href, only = '' }: P
           {title}
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground tabular-nums">{list.length}</span>
         </h3>
-        <div className="grid gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+        <div className="grid items-start gap-4 [grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
           {list.map((f) => (
             <Card key={f.key} f={f} link={links[f.key]} url={urls[f.key]} href={href} />
           ))}
