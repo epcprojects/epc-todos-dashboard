@@ -1,6 +1,6 @@
 'use client';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Check, ChevronLeft, ChevronRight, Clapperboard, Copy, Download, Image as ImageIcon, X } from 'lucide-react';
+import { Check, ChevronDown, ChevronLeft, ChevronRight, Clapperboard, Copy, Download, Image as ImageIcon, X } from 'lucide-react';
 import { formatBytes, mediaKind, type ManageFile, type MediaKind } from '@/lib/manage-config';
 import { groupRecent, uploadTime } from '@/lib/recent';
 import { Dialog, DialogContent, DialogDescription, DialogTitle } from '@/components/ui/dialog';
@@ -202,6 +202,9 @@ export function TodayGallery({ files, links, now, loadUrls, href, only = '' }: P
   const keys = useMemo(() => order.map((f) => f.key), [order]);
   const [urls, setUrls] = useState<Record<string, string>>({});
   const [openKey, setOpenKey] = useState<string | null>(null);
+  // sections the visitor has folded away (a day, or its Images / Videos)
+  const [closed, setClosed] = useState<Record<string, boolean>>({});
+  const flip = (k: string) => setClosed((c) => ({ ...c, [k]: !c[k] }));
   const openIdx = openKey ? order.findIndex((f) => f.key === openKey) : -1;
 
   useEffect(() => {
@@ -231,31 +234,43 @@ export function TodayGallery({ files, links, now, loadUrls, href, only = '' }: P
       </div>
     );
 
-  const section = (title: string, list: ManageFile[]) =>
-    list.length ? (
-      <div className="mt-5">
-        <h3 className="mb-3 flex items-center gap-2 text-[15px] font-semibold">
+  const section = (dayKey: string, title: string, list: ManageFile[]) => {
+    if (!list.length) return null;
+    const id = `${dayKey}:${title}`;
+    const shut = !!closed[id];
+    return (
+      <div className="mt-3">
+        <button type="button" onClick={() => flip(id)} aria-expanded={!shut} aria-controls={`sec-${id}`} className="mb-2 flex min-h-11 w-full items-center gap-2 rounded-lg px-1 text-left text-[15px] font-semibold hover:bg-muted/60">
+          <ChevronDown className={`size-5 shrink-0 text-muted-foreground transition-transform ${shut ? '-rotate-90' : ''}`} />
           {title}
           <span className="rounded-full bg-muted px-2 py-0.5 text-xs font-bold text-muted-foreground tabular-nums">{list.length}</span>
-        </h3>
-        <div className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
-          {list.map((f) => (
-            <Card key={f.key} f={f} link={links[f.key]} url={urls[f.key]} href={href} onOpen={() => setOpenKey(f.key)} />
-          ))}
-        </div>
+        </button>
+        {shut ? null : (
+          <div id={`sec-${id}`} className="grid grid-cols-2 gap-2.5 sm:gap-4 sm:[grid-template-columns:repeat(auto-fill,minmax(240px,1fr))]">
+            {list.map((f) => (
+              <Card key={f.key} f={f} link={links[f.key]} url={urls[f.key]} href={href} onOpen={() => setOpenKey(f.key)} />
+            ))}
+          </div>
+        )}
       </div>
-    ) : null;
+    );
+  };
 
   return (
     <>
       <div className="flex flex-col gap-8 sm:gap-9">
         {days.map((d) => (
           <section key={d.key} aria-label={d.label}>
-            <div className="eyebrow border-b pb-2">
+            <button type="button" onClick={() => flip(d.key)} aria-expanded={!closed[d.key]} className="eyebrow flex min-h-11 w-full items-center gap-2 border-b pb-1 text-left">
+              <ChevronDown className={`size-4 shrink-0 transition-transform ${closed[d.key] ? '-rotate-90' : ''}`} />
               {d.label} · {d.images.length + d.videos.length} {d.images.length + d.videos.length === 1 ? 'file' : 'files'}
-            </div>
-            {section('Images', d.images)}
-            {section('Videos', d.videos)}
+            </button>
+            {closed[d.key] ? null : (
+              <>
+                {section(d.key, 'Images', d.images)}
+                {section(d.key, 'Videos', d.videos)}
+              </>
+            )}
           </section>
         ))}
       </div>
