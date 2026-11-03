@@ -73,16 +73,16 @@ function Card({ f, link, url, href }: { f: ManageFile; link?: TodayLink; url?: s
         ) : null}
       </div>
       <div className="mt-auto flex gap-2 px-0.5 pb-0.5">
-        <a className="btn primary flex-1" href={href(f.key, 'download')}>
-          <Download className="size-4" /> Download
+        <a className="btn primary flex-1" href={href(f.key, 'download')} aria-label={`Download ${f.name}`} title="Download">
+          <Download className="size-[18px]" />
         </a>
-        <a className="btn" href={href(f.key, 'view')} target="_blank" rel="noreferrer" aria-label={`View ${f.name}`} title="View">
-          <Eye className="size-4" />
+        <a className="btn flex-1" href={href(f.key, 'view')} target="_blank" rel="noreferrer" aria-label={`View ${f.name}`} title="View">
+          <Eye className="size-[18px]" />
         </a>
         {cap ? (
           <button
             type="button"
-            className="btn"
+            className="btn flex-1"
             aria-label="Copy caption"
             title="Copy caption"
             onClick={async () => {
@@ -91,7 +91,7 @@ function Card({ f, link, url, href }: { f: ManageFile; link?: TodayLink; url?: s
               setTimeout(() => setCopied(false), 1800);
             }}
           >
-            {copied ? <Check className="size-4" /> : <Copy className="size-4" />}
+            {copied ? <Check className="size-[18px]" /> : <Copy className="size-[18px]" />}
           </button>
         ) : null}
       </div>
