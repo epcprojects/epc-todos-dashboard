@@ -758,3 +758,6 @@ table.t th, table.cmp th { font-family: var(--font-mono-ui), ui-monospace, monos
 /* thumbnails fill their box; cards that are far off screen are not laid out or painted at all */
 .lazy-thumb img, .lazy-thumb video { width: 100%; height: 100%; object-fit: cover; display: block; }
 .mg-card { content-visibility: auto; contain-intrinsic-size: auto 340px; }
+
+/* today-posts buttons: 44px touch targets */
+.tg-btn { min-height: 44px; min-width: 44px; display: inline-flex; align-items: center; justify-content: center; gap: 8px; }
