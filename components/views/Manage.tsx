@@ -2,6 +2,7 @@
 import { ChevronLeft, ChevronRight, Download, File as FileGeneric, FileArchive, FileAudio, FileImage, FileSpreadsheet, FileText, FileVideo, FolderPlus, LayoutGrid, Link2, List, Pencil, Play, RefreshCw, Trash2, Upload, X } from 'lucide-react';
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import { TodayGallery } from '../TodayGallery';
+import { LazyThumb } from '../LazyThumb';
 import { TODAY_FOLDER, recentMedia } from '@/lib/recent';
 import { ALLOWED_EXTENSIONS, FOLDERS, IMAGE_EXTENSIONS, MAX_FILES_PER_UPLOAD_REQUEST, MAX_FILE_BYTES, ROOT_PREFIX, VIDEO_EXTENSIONS, extOf, folderByKey, formatBytes, isAllowedName, mediaKind, platformOfPath, sanitizeName, type FileLink, type ManageFile, type MediaKind, type TaskOption } from '@/lib/manage-config';
 import { api, lsGet, lsSet, readLocation, sleep, writeLocation } from '@/lib/client/api';
@@ -36,7 +37,7 @@ interface Target {
   fields: Record<string, string>;
 }
 
-const PAGE = 200;
+const PAGE = 48;
 const CONCURRENCY = 3;
 const label = (key: string) => (key === TODAY_FOLDER ? 'today-posts' : folderByKey(key)?.label || key);
 /** Display name of the last segment of a folder path (the friendly name for LinkedIn, TikTok …); the root is Automation-Folder. */
@@ -373,6 +374,16 @@ export function ManageView() {
     return l;
   }, [inFolder, q, sort, desc, only]);
   const visible = list.slice(0, shown);
+  // the next page loads by itself shortly before the end of the list comes into view
+  const moreRef = useRef<HTMLDivElement>(null);
+  const more = list.length > shown;
+  useEffect(() => {
+    const el = moreRef.current;
+    if (!more || !el) return;
+    const io = new IntersectionObserver(([e]) => e.isIntersecting && setShown((s) => s + PAGE), { rootMargin: '900px 0px' });
+    io.observe(el);
+    return () => io.disconnect();
+  }, [more, shown, view]);
 
   // preview modal: current file plus its neighbours get signed view links
   const pvIdx = pv ? list.findIndex((f) => f.key === pv) : -1;
@@ -870,10 +881,9 @@ export function ManageView() {
                       <div className="mg-media">
                         <button className="mg-thumb" onClick={() => setPv(f.key)} aria-label={`Preview ${f.name}`}>
                           {url && IMAGE_EXTENSIONS.includes(e) ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={url} alt="" loading="lazy" />
+                            <LazyThumb url={url} video={false} />
                           ) : url && VIDEO_EXTENSIONS.includes(e) ? (
-                            <video src={url + '#t=0.1'} preload="metadata" muted playsInline />
+                            <LazyThumb url={url} video />
                           ) : (
                             <span className="mg-fallback">
                               <FileBadge name={f.name} big />
@@ -923,7 +933,7 @@ export function ManageView() {
               </div>
             )}
             {list.length > shown && (
-              <div className="pager">
+              <div className="pager" ref={moreRef}>
                 <span className="muted">
                   Showing {shown} of {list.length}
                 </span>

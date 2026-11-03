@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Check, Clapperboard, Copy, Download, Eye, Image as ImageIcon } from 'lucide-react';
 import { formatBytes, mediaKind, type ManageFile, type MediaKind } from '@/lib/manage-config';
 import { groupRecent, uploadTime } from '@/lib/recent';
+import { LazyThumb } from './LazyThumb';
 
 export interface TodayLink {
   title: string;
@@ -43,12 +44,11 @@ function Card({ f, link, url, href }: { f: ManageFile; link?: TodayLink; url?: s
   const cap = link?.caption?.trim() || '';
   return (
     <article className="flex flex-col gap-3 rounded-2xl border bg-card p-2.5 shadow-(--shadow-card)">
-      <a href={href(f.key, 'view')} target="_blank" rel="noreferrer" className="relative block aspect-[16/10] overflow-hidden rounded-xl bg-muted" aria-label={`Open ${f.name}`}>
+      <a href={href(f.key, 'view')} target="_blank" rel="noreferrer" className="lazy-thumb relative block aspect-[16/10] overflow-hidden rounded-xl bg-muted" aria-label={`Open ${f.name}`}>
         {url && kind === 'image' ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={url} alt={f.name} loading="lazy" className="size-full object-cover" />
+          <LazyThumb url={url} video={false} alt={f.name} />
         ) : url && kind === 'video' ? (
-          <video src={url + '#t=0.1'} preload="metadata" muted playsInline className="size-full object-cover" />
+          <LazyThumb url={url} video />
         ) : (
           <span className="grid size-full place-items-center text-muted-foreground">{kind === 'video' ? <Clapperboard className="size-8" /> : <ImageIcon className="size-8" />}</span>
         )}
