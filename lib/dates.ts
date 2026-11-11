@@ -57,8 +57,15 @@ export function guessYear(m: number, now: Date = new Date()): number {
 export type DateOrder = 'dmy' | 'mdy';
 
 export function parseDateText(input: unknown, order: DateOrder, now: Date = new Date()): string | null {
-  const s = String(input ?? '').trim();
+  let s = String(input ?? '').trim();
   if (!s) return null;
+  // a date written as a file name ("12_Nov.png", "Nov_12.jpg", "12-Nov-2026.mp4"): drop the extension and let "_" and a
+  // letter/digit change act as separators, since "_" counts as a word character and would hide the month and the day
+  // only short values: links and long sentences are never rewritten
+  if (s.length <= 30 && !/[:/]|www\./i.test(s)) {
+    s = s.replace(/\.(png|jpe?g|gif|webp|avif|bmp|svg|mp4|mov|webm|m4v|pdf|docx?|xlsx?|csv|txt)$/i, '');
+    if (/[_]/.test(s) || /[a-z]\d|\d[a-z]/i.test(s)) s = s.replace(/_/g, ' ').replace(/([a-z])(\d)/gi, '$1 $2').replace(/(\d)([a-z])/gi, '$1 $2');
+  }
   let r: RegExpMatchArray | null;
   if ((r = s.match(/(\d{4})[-\/.](\d{1,2})[-\/.](\d{1,2})/))) return mkISO(+r[1], +r[2], +r[3]);
   if ((r = s.match(/\b(\d{1,2})[\/.\-](\d{1,2})(?:[\/.\-](\d{2,4}))?\b/))) {

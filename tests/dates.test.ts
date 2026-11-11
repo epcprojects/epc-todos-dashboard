@@ -21,6 +21,16 @@ describe('parseDateText', () => {
     expect(parseDateText('hello', 'dmy', now)).toBeNull();
   });
   it('two-digit years', () => expect(parseDateText('12/10/26', 'dmy', now)).toBe('2026-10-12'));
+  it('dates written as file names', () => {
+    expect(parseDateText('12_Nov.png', 'dmy', now)).toBe('2026-11-12');
+    expect(parseDateText('3_Oct.PNG', 'dmy', now)).toBe('2026-10-03');
+    expect(parseDateText('Nov_12.jpg', 'dmy', now)).toBe('2026-11-12');
+    expect(parseDateText('12-Nov-2026.mp4', 'dmy', now)).toBe('2026-11-12');
+    expect(parseDateText('12_Nov_2026.png', 'dmy', now)).toBe('2026-11-12');
+    expect(parseDateText('12th_Nov', 'dmy', now)).toBe('2026-11-12');
+    expect(parseDateText('Nov12', 'dmy', now)).toBe('2026-11-12');
+  });
+  it('a month without a day stays unreadable', () => expect(parseDateText('Nov.png', 'dmy', now)).toBeNull());
 });
 
 describe('Excel serial numbers', () => {
