@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useState } from 'react';
+import { Pencil } from 'lucide-react';
 import { TEAMS, teamKeys, type HistoryEntry, type Task, type Team } from '@/lib/constants';
 import { fmtDate, fmtDT, parseDateText } from '@/lib/dates';
 import { sched } from '@/lib/metrics';
@@ -21,6 +22,8 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
   const { taskById, today, isAdmin, role, settings, canTouch, drafts, setDraft, writeTask, confirmBox, deleteTask, toast, loadHistory } = useApp();
   const t = taskById(id)!;
   const [edit, setEdit] = useState<string[] | null>(null);
+  // one field edited in place: its column and its new text
+  const [one, setOne] = useState<{ i: number; val: string } | null>(null);
   const [history, setHistory] = useState<HistoryEntry[]>([]);
   const [team, setTeam] = useState<Team>(t.team);
 
@@ -46,8 +49,18 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
     if (!edit) return;
     const v = [...t.v];
     edit.forEach((x, i) => (v[i] = x));
+    commit(v);
+  };
+  const saveOne = () => {
+    if (!one) return;
+    const v = [...t.v];
+    v[one.i] = one.val;
+    commit(v);
+  };
+  const commit = (v: string[]) => {
     const changed = v.map((x, i) => (x !== t.v[i] ? t.h[i] : null)).filter((x): x is string => x !== null);
     setEdit(null);
+    setOne(null);
     if (!changed.length) return;
     const d = deriveFields(v, t.m);
     let postDate = t.postDate;
@@ -269,10 +282,58 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
                 </>
               );
             else if (i === t.m.platform) body = <PlatPills value={v} />;
-            else body = <div className="txt">{v ? v : <span className="muted">Empty</span>}</div>;
+            else
+              body = (
+                <div className="txt">
+                  {v ? (
+                    v
+                  ) : canEdit ? (
+                    <button type="button" className="linkish" onClick={() => setOne({ i, val: '' })}>
+                      <span className="muted">Empty</span> · Add a value
+                    </button>
+                  ) : (
+                    <span className="muted">Empty</span>
+                  )}
+                </div>
+              );
+            if (one && one.i === i)
+              return (
+                <div className="content-field" key={i}>
+                  <h4>
+                    <label htmlFor={`one-${i}`}>{h}</label>
+                  </h4>
+                  <textarea
+                    className="inp"
+                    id={`one-${i}`}
+                    autoFocus
+                    value={one.val}
+                    rows={Math.min(10, Math.max(2, Math.ceil(one.val.length / 60)))}
+                    onChange={(e) => setOne({ i, val: e.target.value })}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Escape') setOne(null);
+                      if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) saveOne();
+                    }}
+                  />
+                  <div className="row" style={{ marginTop: 8 }}>
+                    <button className="btn sm primary" onClick={saveOne}>
+                      Save
+                    </button>
+                    <button className="btn sm" onClick={() => setOne(null)}>
+                      Cancel
+                    </button>
+                  </div>
+                </div>
+              );
             return (
               <div className="content-field" key={i}>
-                <h4>{h}</h4>
+                <h4 className="flex items-center justify-between gap-2">
+                  {h}
+                  {canEdit && v ? (
+                    <button type="button" className="inline-flex min-h-8 items-center gap-1 rounded-md px-2 text-[12px] font-semibold tracking-normal normal-case text-muted-foreground hover:bg-muted hover:text-foreground" onClick={() => setOne({ i, val: v })} aria-label={`Edit ${h}`}>
+                      <Pencil className="size-3.5" /> Edit
+                    </button>
+                  ) : null}
+                </h4>
                 {body}
               </div>
             );
