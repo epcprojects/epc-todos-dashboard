@@ -19,11 +19,11 @@ describe('role permissions (shared by the UI and the API)', () => {
     expect(canTouch('editor', task('editor'))).toBe(true);
     expect(canTouch('editor', task('designer'))).toBe(false);
   });
-  it('content editing needs the admin switch for teams', () => {
-    expect(canEditContent('designer', task('designer'), false)).toBe(false);
-    expect(canEditContent('designer', task('designer'), true)).toBe(true);
-    expect(canEditContent('designer', task('editor'), true)).toBe(false);
-    expect(canEditContent('admin', task('editor'), false)).toBe(true);
+  it('content editing: admin everywhere, teams on their own tasks only', () => {
+    expect(canEditContent('designer', task('designer'))).toBe(true);
+    expect(canEditContent('editor', task('editor'))).toBe(true);
+    expect(canEditContent('designer', task('editor'))).toBe(false);
+    expect(canEditContent('admin', task('editor'))).toBe(true);
   });
   it('only admin is an admin role', () => {
     expect(isAdminRole('admin')).toBe(true);

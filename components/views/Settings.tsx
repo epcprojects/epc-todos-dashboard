@@ -7,7 +7,6 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Switch } from '@/components/ui/switch';
 import { useApp } from '../store';
 import { UsersSection } from './UsersSection';
 
@@ -144,15 +143,9 @@ export function SettingsView() {
           </Card>
         </Section>
 
-        <Section title="Editing imported content" desc="Team members can always change status and add production notes. Only the admin can delete.">
+        <Section title="Editing imported content" desc="Every team member can change status, add production notes and edit the Excel content (copy, direction, captions) of their own team's tasks. Only the admin can assign, archive and delete.">
           <Card>
-            <CardContent className="flex items-center justify-between gap-6">
-              <Label htmlFor="allow-edit" className="cursor-pointer text-sm leading-snug font-medium">
-                Let every team role edit imported content
-                <span className="mt-0.5 block text-[13px] font-normal text-muted-foreground">Copy, direction and captions from the Excel file.</span>
-              </Label>
-              <Switch id="allow-edit" checked={settings.allowTeamEdit} onCheckedChange={(v) => void saveSettings({ allowTeamEdit: !!v })} />
-            </CardContent>
+            <CardContent className="text-sm text-muted-foreground">This is always on. There is nothing to switch.</CardContent>
           </Card>
         </Section>
 

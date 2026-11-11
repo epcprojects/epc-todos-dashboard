@@ -41,7 +41,7 @@ function DrawerBody({ id, onClose }: { id: string; onClose: () => void }) {
   useEffect(() => setTeam(t.team), [t.team]);
 
   const touch = canTouch(t);
-  const canEdit = role ? (isAdmin || canEditContent(role, { team: t.team, archived: false }, settings.allowTeamEdit)) : false;
+  const canEdit = role ? (isAdmin || canEditContent(role, { team: t.team, archived: false })) : false;
   const dr = drafts[t.id] || {};
   const sf = sched(t, today);
 

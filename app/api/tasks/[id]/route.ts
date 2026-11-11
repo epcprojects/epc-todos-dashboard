@@ -45,8 +45,8 @@ export const PATCH = handle(async (req: Request, ctx: { params: Promise<{ id: st
   if (p.team !== undefined) await assertTeams([p.team]);
   const adminOnly = p.team !== undefined || p.adminNote !== undefined || p.archived !== undefined;
   if (adminOnly && role !== 'admin') throw new ApiError(403, 'Only the admin can assign, archive or leave notes for the team.');
-  if (p.content !== undefined && !canEditContent(role, task, settings.allowTeamEdit)) {
-    throw new ApiError(403, 'Editing imported content is turned off for your team. Ask the admin to allow it in Settings.');
+  if (p.content !== undefined && !canEditContent(role, task)) {
+    throw new ApiError(403, 'You can only edit the content of tasks assigned to your team.');
   }
 
   const sets: string[] = [];
